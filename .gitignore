@@ -1,0 +1,14 @@
+.idea/
+.vscode/
+
+coverage.out
+.github-ci.yaml
+/github-ci
+
+# Jekyll (docs)
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/.sass-cache/
+docs/Gemfile.lock
+docs/vendor/
