@@ -11,3 +11,5 @@ ignore:
   - "cmd/github-ci"
   - "internal/cmd"
   - "internal/testutil"
+  - "internal/actions"
+  - "internal/upgrader"

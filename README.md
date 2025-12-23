@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/reugn/github-ci/actions/workflows/build.yml/badge.svg)](https://github.com/reugn/github-ci/actions/workflows/build.yml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/reugn/github-ci)](https://pkg.go.dev/github.com/reugn/github-ci)
+[![codecov](https://codecov.io/gh/reugn/github-ci/graph/badge.svg?token=CTG5JY369G)](https://codecov.io/gh/reugn/github-ci)
 
 A CLI tool for managing GitHub Actions workflows. It helps lint workflows for best practices and automatically upgrade actions to their latest versions.
 
