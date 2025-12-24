@@ -181,7 +181,12 @@ func (l *FormatLinter) fixWorkflow(wf *workflow.Workflow) error {
 	}
 
 	content := strings.Join(fixed, "\n") + "\n"
-	return os.WriteFile(wf.File, []byte(content), 0600)
+
+	// Keep in-memory state in sync with the fixed content
+	wf.RawBytes = []byte(content)
+
+	// Write the fixed content to the file
+	return os.WriteFile(wf.File, wf.RawBytes, 0600)
 }
 
 // fixLines applies formatting fixes to lines.

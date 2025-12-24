@@ -18,6 +18,19 @@ type Issue struct {
 	Message string // Description of the linting issue
 }
 
+// Key returns a unique identifier for this issue.
+func (i *Issue) Key() string {
+	return fmt.Sprintf("%s:%d:%s:%s", i.File, i.Line, i.Linter, i.Message)
+}
+
+// String implements fmt.Stringer for Issue.
+func (i *Issue) String() string {
+	if i.Line > 0 {
+		return fmt.Sprintf("%s:%d: (%s) %s", i.File, i.Line, i.Linter, i.Message)
+	}
+	return fmt.Sprintf("%s: (%s) %s", i.File, i.Linter, i.Message)
+}
+
 // WorkflowLinter orchestrates multiple individual linters based on configuration.
 type WorkflowLinter struct {
 	ctx        context.Context      // Context for timeout/cancellation
