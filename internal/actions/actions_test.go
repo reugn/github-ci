@@ -8,6 +8,7 @@ func TestParseActionUses(t *testing.T) {
 		input       string
 		wantOwner   string
 		wantRepo    string
+		wantPath    string
 		wantRef     string
 		expectError bool
 	}{
@@ -16,6 +17,7 @@ func TestParseActionUses(t *testing.T) {
 			input:     "actions/checkout@v3",
 			wantOwner: "actions",
 			wantRepo:  "checkout",
+			wantPath:  "",
 			wantRef:   "v3",
 		},
 		{
@@ -23,6 +25,7 @@ func TestParseActionUses(t *testing.T) {
 			input:     "actions/setup-go@4ab4c1d02e2b3d0af1e9f9c2a3b2c3d4e5f6a7b8c9",
 			wantOwner: "actions",
 			wantRepo:  "setup-go",
+			wantPath:  "",
 			wantRef:   "4ab4c1d02e2b3d0af1e9f9c2a3b2c3d4e5f6a7b8c9",
 		},
 		{
@@ -30,7 +33,24 @@ func TestParseActionUses(t *testing.T) {
 			input:     "codecov/codecov-action@v3.1.4",
 			wantOwner: "codecov",
 			wantRepo:  "codecov-action",
+			wantPath:  "",
 			wantRef:   "v3.1.4",
+		},
+		{
+			name:      "composite action with path",
+			input:     "github/codeql-action/upload-sarif@v2",
+			wantOwner: "github",
+			wantRepo:  "codeql-action",
+			wantPath:  "upload-sarif",
+			wantRef:   "v2",
+		},
+		{
+			name:      "composite action with deep path",
+			input:     "aws-actions/configure-aws-credentials/assume-role@v4",
+			wantOwner: "aws-actions",
+			wantRepo:  "configure-aws-credentials",
+			wantPath:  "assume-role",
+			wantRef:   "v4",
 		},
 		{
 			name:        "missing @",
@@ -75,6 +95,9 @@ func TestParseActionUses(t *testing.T) {
 			}
 			if result.Repo != tt.wantRepo {
 				t.Errorf("ParseActionUses(%q).Repo = %q, want %q", tt.input, result.Repo, tt.wantRepo)
+			}
+			if result.Path != tt.wantPath {
+				t.Errorf("ParseActionUses(%q).Path = %q, want %q", tt.input, result.Path, tt.wantPath)
 			}
 			if result.Ref != tt.wantRef {
 				t.Errorf("ParseActionUses(%q).Ref = %q, want %q", tt.input, result.Ref, tt.wantRef)

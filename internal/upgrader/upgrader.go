@@ -249,7 +249,13 @@ func (u *Upgrader) getLatestVersion(cfg *config.Config, info *actions.ActionInfo
 func (u *Upgrader) applyUpdate(upd updateInfo) error {
 	newRef, comment := u.formatVersion(upd)
 
-	newUses := fmt.Sprintf("%s/%s@%s", upd.ActionInfo.Owner, upd.ActionInfo.Repo, newRef)
+	// Build the new uses string, preserving path for composite actions
+	var newUses string
+	if upd.ActionInfo.Path != "" {
+		newUses = fmt.Sprintf("%s/%s/%s@%s", upd.ActionInfo.Owner, upd.ActionInfo.Repo, upd.ActionInfo.Path, newRef)
+	} else {
+		newUses = fmt.Sprintf("%s/%s@%s", upd.ActionInfo.Owner, upd.ActionInfo.Repo, newRef)
+	}
 	if err := upd.Workflow.UpdateActionUses(upd.Action.Uses, newUses, comment); err != nil {
 		return fmt.Errorf("failed to update action in %s: %w", upd.Workflow.File, err)
 	}
