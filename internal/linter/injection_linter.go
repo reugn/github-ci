@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/reugn/github-ci/internal/stringutil"
 	"github.com/reugn/github-ci/internal/workflow"
@@ -48,7 +49,10 @@ var dangerousContexts = []string{
 
 // dangerousPatterns contains compiled regex patterns for detecting dangerous contexts.
 // Patterns support both exact matches and wildcards.
-var dangerousPatterns []*regexp.Regexp
+var (
+	dangerousPatterns []*regexp.Regexp
+	patternsOnce      sync.Once
+)
 
 // stepConfigKeys lists YAML keys that indicate step configuration rather than run content.
 var stepConfigKeys = []string{
@@ -57,15 +61,18 @@ var stepConfigKeys = []string{
 	"shell:",
 }
 
-func init() {
-	dangerousPatterns = make([]*regexp.Regexp, 0, len(dangerousContexts))
-	for _, ctx := range dangerousContexts {
-		// Convert wildcard patterns to regex
-		pattern := regexp.QuoteMeta(ctx)
-		pattern = strings.ReplaceAll(pattern, `\*`, `[^}]+`)
-		re := regexp.MustCompile(`\$\{\{\s*` + pattern + `\s*\}\}`)
-		dangerousPatterns = append(dangerousPatterns, re)
-	}
+// initPatterns compiles dangerous context patterns once.
+func initPatterns() {
+	patternsOnce.Do(func() {
+		dangerousPatterns = make([]*regexp.Regexp, 0, len(dangerousContexts))
+		for _, ctx := range dangerousContexts {
+			// Convert wildcard patterns to regex
+			pattern := regexp.QuoteMeta(ctx)
+			pattern = strings.ReplaceAll(pattern, `\*`, `[^}]+`)
+			re := regexp.MustCompile(`\$\{\{\s*` + pattern + `\s*\}\}`)
+			dangerousPatterns = append(dangerousPatterns, re)
+		}
+	})
 }
 
 // InjectionLinter checks for shell injection vulnerabilities in workflow files.
@@ -75,6 +82,7 @@ type InjectionLinter struct{}
 
 // NewInjectionLinter creates a new InjectionLinter instance.
 func NewInjectionLinter() *InjectionLinter {
+	initPatterns()
 	return &InjectionLinter{}
 }
 
