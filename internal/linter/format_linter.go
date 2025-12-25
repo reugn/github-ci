@@ -21,13 +21,8 @@ func NewFormatLinter(settings *config.FormatSettings) *FormatLinter {
 	return &FormatLinter{settings: settings}
 }
 
-// LintWorkflow checks a single workflow for YAML formatting issues.
+// LintWorkflow checks a single workflow for formatting issues.
 func (l *FormatLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
-	return l.lintWorkflow(wf), nil
-}
-
-// lintWorkflow checks a single workflow file for formatting issues.
-func (l *FormatLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
 	file := filepath.Base(wf.File)
 	lines := wf.Lines()
 	minIndent := l.findMinIndentation(lines)
@@ -79,7 +74,7 @@ func (l *FormatLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
 		prevWasBlank = isBlank
 	}
 
-	return issues
+	return issues, nil
 }
 
 // checkLineLength checks if a line exceeds the configured maximum.
@@ -167,11 +162,6 @@ func (l *FormatLinter) findMinIndentation(lines []string) int {
 
 // FixWorkflow automatically fixes formatting issues in a single workflow.
 func (l *FormatLinter) FixWorkflow(wf *workflow.Workflow) error {
-	return l.fixWorkflow(wf)
-}
-
-// fixWorkflow fixes formatting issues in a single workflow file.
-func (l *FormatLinter) fixWorkflow(wf *workflow.Workflow) error {
 	lines := wf.Lines()
 	fixed := l.fixLines(lines)
 

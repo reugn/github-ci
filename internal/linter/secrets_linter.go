@@ -40,11 +40,6 @@ func NewSecretsLinter() *SecretsLinter {
 
 // LintWorkflow checks a single workflow for hardcoded secrets.
 func (l *SecretsLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
-	return l.lintWorkflow(wf), nil
-}
-
-// lintWorkflow checks a single workflow for hardcoded secrets.
-func (l *SecretsLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
 	var issues []*Issue
 	file := filepath.Base(wf.File)
 	lines := wf.Lines()
@@ -55,7 +50,7 @@ func (l *SecretsLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
 		}
 	}
 
-	return issues
+	return issues, nil
 }
 
 // checkLine checks a single line for potential secrets.

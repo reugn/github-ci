@@ -247,3 +247,153 @@ jobs:
 		}
 	}
 }
+
+func TestFormatLinter_NilSettings(t *testing.T) {
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+
+	content := `name: Test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+`
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := workflow.LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	// Create linter with nil settings
+	linter := NewFormatLinter(nil)
+
+	// Should not panic with nil settings
+	_, err = linter.LintWorkflow(wf)
+	if err != nil {
+		t.Fatalf("LintWorkflow() error = %v", err)
+	}
+}
+
+func TestFormatLinter_Lint_OverIndentation(t *testing.T) {
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+
+	// Content with over-indentation (jumps by 4 instead of 2)
+	content := `name: Test
+on: push
+jobs:
+    build:
+        runs-on: ubuntu-latest
+`
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := workflow.LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	linter := NewFormatLinter(&config.FormatSettings{IndentWidth: 2, MaxLineLength: 120})
+	issues, err := linter.LintWorkflow(wf)
+	if err != nil {
+		t.Fatalf("LintWorkflow() error = %v", err)
+	}
+
+	// Should detect over-indentation
+	found := false
+	for _, issue := range issues {
+		if strings.Contains(issue.Message, "indentation") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected to find indentation issue for over-indented content")
+	}
+}
+
+func TestFormatLinter_Fix_OverIndentation(t *testing.T) {
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+
+	// Content with over-indentation
+	content := `name: Test
+on: push
+jobs:
+    build:
+        runs-on: ubuntu-latest
+`
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := workflow.LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	linter := NewFormatLinter(&config.FormatSettings{IndentWidth: 2, MaxLineLength: 120})
+	err = linter.FixWorkflow(wf)
+	if err != nil {
+		t.Fatalf("FixWorkflow() error = %v", err)
+	}
+
+	// Verify in-memory state was updated
+	lines := wf.Lines()
+	if len(lines) < 4 {
+		t.Fatal("Expected at least 4 lines")
+	}
+
+	// Check that "build:" line has correct indentation (2 spaces)
+	buildLine := lines[3]
+	if !strings.HasPrefix(buildLine, "  build:") {
+		t.Errorf("Expected 'build:' to have 2-space indent, got: %q", buildLine)
+	}
+}
+
+func TestFormatLinter_TrailingEmptyLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+
+	// Content with trailing empty lines
+	content := `name: Test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+
+`
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := workflow.LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	linter := NewFormatLinter(&config.FormatSettings{IndentWidth: 2, MaxLineLength: 120})
+	err = linter.FixWorkflow(wf)
+	if err != nil {
+		t.Fatalf("FixWorkflow() error = %v", err)
+	}
+
+	// Verify trailing empty lines were removed
+	fixed, err := os.ReadFile(workflowPath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+
+	// Should end with exactly one newline
+	if strings.HasSuffix(string(fixed), "\n\n") {
+		t.Error("Fixed content still has trailing empty lines")
+	}
+	if !strings.HasSuffix(string(fixed), "\n") {
+		t.Error("Fixed content should end with a newline")
+	}
+}

@@ -50,6 +50,13 @@ var dangerousContexts = []string{
 // Patterns support both exact matches and wildcards.
 var dangerousPatterns []*regexp.Regexp
 
+// stepConfigKeys lists YAML keys that indicate step configuration rather than run content.
+var stepConfigKeys = []string{
+	"env:", "name:", "with:", "if:", "id:", "uses:",
+	"continue-on-error:", "timeout-minutes:", "working-directory:",
+	"shell:",
+}
+
 func init() {
 	dangerousPatterns = make([]*regexp.Regexp, 0, len(dangerousContexts))
 	for _, ctx := range dangerousContexts {
@@ -71,11 +78,6 @@ func NewInjectionLinter() *InjectionLinter {
 	return &InjectionLinter{}
 }
 
-// LintWorkflow checks a single workflow for shell injection vulnerabilities.
-func (l *InjectionLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
-	return l.lintWorkflow(wf), nil
-}
-
 // lineContext tracks the parsing state while scanning workflow lines.
 type lineContext struct {
 	inRunBlock     bool
@@ -84,8 +86,8 @@ type lineContext struct {
 	envBlockIndent int
 }
 
-// lintWorkflow checks a single workflow for injection vulnerabilities.
-func (l *InjectionLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
+// LintWorkflow checks a single workflow for injection vulnerabilities.
+func (l *InjectionLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 	var issues []*Issue
 	file := filepath.Base(wf.File)
 	lines := wf.Lines()
@@ -97,7 +99,7 @@ func (l *InjectionLinter) lintWorkflow(wf *workflow.Workflow) []*Issue {
 		}
 	}
 
-	return issues
+	return issues, nil
 }
 
 // processLine processes a single line and returns an issue if found.
@@ -167,12 +169,7 @@ func isStepBoundary(trimmed string) bool {
 
 // isStepConfigKey checks if a line is a step configuration key (not run content).
 func isStepConfigKey(trimmed string) bool {
-	configKeys := []string{
-		"env:", "name:", "with:", "if:", "id:", "uses:",
-		"continue-on-error:", "timeout-minutes:", "working-directory:",
-		"shell:",
-	}
-	for _, key := range configKeys {
+	for _, key := range stepConfigKeys {
 		if strings.HasPrefix(trimmed, key) {
 			return true
 		}
