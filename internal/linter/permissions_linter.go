@@ -1,8 +1,6 @@
 package linter
 
 import (
-	"path/filepath"
-
 	"github.com/reugn/github-ci/internal/workflow"
 )
 
@@ -17,10 +15,8 @@ func NewPermissionsLinter() *PermissionsLinter {
 // LintWorkflow checks a single workflow for missing permissions configuration.
 func (l *PermissionsLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 	if !wf.HasPermissions() {
-		return []*Issue{{
-			File:    filepath.Base(wf.File),
-			Message: "Workflow is missing permissions configuration",
-		}}, nil
+		issue := newIssue(wf.BaseName(), 0, "Workflow is missing permissions configuration")
+		return []*Issue{issue}, nil
 	}
 	return nil, nil
 }

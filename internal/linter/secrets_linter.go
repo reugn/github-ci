@@ -2,7 +2,6 @@ package linter
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -41,7 +40,7 @@ func NewSecretsLinter() *SecretsLinter {
 // LintWorkflow checks a single workflow for hardcoded secrets.
 func (l *SecretsLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 	var issues []*Issue
-	file := filepath.Base(wf.File)
+	file := wf.BaseName()
 	lines := wf.Lines()
 
 	for i, line := range lines {
@@ -66,11 +65,8 @@ func (l *SecretsLinter) checkLine(file string, lineNum int, line string) *Issue 
 
 	for _, p := range secretPatterns {
 		if p.re.MatchString(line) {
-			return &Issue{
-				File:    file,
-				Line:    lineNum,
-				Message: fmt.Sprintf("Potential hardcoded %s detected", p.name),
-			}
+			message := fmt.Sprintf("Potential hardcoded %s detected", p.name)
+			return newIssue(file, lineNum, message)
 		}
 	}
 

@@ -501,3 +501,171 @@ func TestIsVersionTag(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkflow_FindJobLine(t *testing.T) {
+	content := `name: Test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+`
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	tests := []struct {
+		jobID    string
+		expected int
+	}{
+		{"build", 4},
+		{"test", 8},
+		{"nonexistent", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.jobID, func(t *testing.T) {
+			line := wf.FindJobLine(tt.jobID)
+			if line != tt.expected {
+				t.Errorf("FindJobLine(%q) = %d, want %d", tt.jobID, line, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWorkflow_FindStepLine(t *testing.T) {
+	content := `name: Test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+      - run: go build
+`
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		jobID     string
+		stepIndex int
+		expected  int
+	}{
+		{"first step", "build", 0, 7},
+		{"second step", "build", 1, 8},
+		{"third step", "build", 2, 10},
+		{"out of bounds", "build", 10, 0},
+		{"nonexistent job", "nonexistent", 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			line := wf.FindStepLine(tt.jobID, tt.stepIndex)
+			if line != tt.expected {
+				t.Errorf("FindStepLine(%q, %d) = %d, want %d", tt.jobID, tt.stepIndex, line, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWorkflow_ExtractWorkflowEnv(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected map[string]bool
+	}{
+		{
+			name: "with env vars",
+			content: `name: Test
+on: push
+env:
+  GO_VERSION: "1.21"
+  NODE_VERSION: "18"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+`,
+			expected: map[string]bool{
+				"GO_VERSION":   true,
+				"NODE_VERSION": true,
+			},
+		},
+		{
+			name: "no env vars",
+			content: `name: Test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+`,
+			expected: map[string]bool{},
+		},
+		{
+			name: "env with comments",
+			content: `name: Test
+on: push
+env:
+  # Comment
+  MY_VAR: "value"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+`,
+			expected: map[string]bool{
+				"MY_VAR": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			workflowPath := filepath.Join(tmpDir, "test.yml")
+			if err := os.WriteFile(workflowPath, []byte(tt.content), 0600); err != nil {
+				t.Fatalf("Failed to write test workflow: %v", err)
+			}
+
+			wf, err := LoadWorkflow(workflowPath)
+			if err != nil {
+				t.Fatalf("LoadWorkflow() error = %v", err)
+			}
+
+			result := wf.ExtractWorkflowEnv()
+			if len(result) != len(tt.expected) {
+				t.Errorf("ExtractWorkflowEnv() returned %d vars, want %d", len(result), len(tt.expected))
+			}
+			for key := range tt.expected {
+				if !result[key] {
+					t.Errorf("ExtractWorkflowEnv() missing key %q", key)
+				}
+			}
+		})
+	}
+}

@@ -3,7 +3,6 @@ package linter
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/reugn/github-ci/internal/actions"
@@ -45,12 +44,9 @@ func (l *VersionsLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 		}
 
 		if !actions.IsCommitHash(actionInfo.Ref) {
-			issues = append(issues, &Issue{
-				File: filepath.Base(wf.File),
-				Line: action.Line,
-				Message: fmt.Sprintf("Action %s uses version tag '%s' instead of commit hash",
-					action.Uses, actionInfo.Ref),
-			})
+			message := fmt.Sprintf("Action %s uses version tag '%s' instead of commit hash",
+				action.Uses, actionInfo.Ref)
+			issues = append(issues, newIssue(wf.BaseName(), action.Line, message))
 		}
 	}
 

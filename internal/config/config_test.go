@@ -431,6 +431,159 @@ func TestNormalizeActionName(t *testing.T) {
 	}
 }
 
+func TestConfig_GetFormatSettings(t *testing.T) {
+	tests := []struct {
+		name              string
+		cfg               *Config
+		wantIndentWidth   int
+		wantMaxLineLength int
+	}{
+		{
+			name:              "nil config",
+			cfg:               nil,
+			wantIndentWidth:   2,
+			wantMaxLineLength: 120,
+		},
+		{
+			name:              "empty config",
+			cfg:               &Config{},
+			wantIndentWidth:   2,
+			wantMaxLineLength: 120,
+		},
+		{
+			name: "nil settings",
+			cfg: &Config{
+				Linters: &LinterConfig{},
+			},
+			wantIndentWidth:   2,
+			wantMaxLineLength: 120,
+		},
+		{
+			name: "custom settings",
+			cfg: &Config{
+				Linters: &LinterConfig{
+					Settings: map[string]any{
+						"format": map[string]any{
+							"indent-width":    4,
+							"max-line-length": 100,
+						},
+					},
+				},
+			},
+			wantIndentWidth:   4,
+			wantMaxLineLength: 100,
+		},
+		{
+			name: "partial settings",
+			cfg: &Config{
+				Linters: &LinterConfig{
+					Settings: map[string]any{
+						"format": map[string]any{
+							"indent-width": 4,
+						},
+					},
+				},
+			},
+			wantIndentWidth:   4,
+			wantMaxLineLength: 120,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := tt.cfg.GetFormatSettings()
+			if settings.IndentWidth != tt.wantIndentWidth {
+				t.Errorf("IndentWidth = %d, want %d", settings.IndentWidth, tt.wantIndentWidth)
+			}
+			if settings.MaxLineLength != tt.wantMaxLineLength {
+				t.Errorf("MaxLineLength = %d, want %d", settings.MaxLineLength, tt.wantMaxLineLength)
+			}
+		})
+	}
+}
+
+func TestConfig_GetStyleSettings(t *testing.T) {
+	tests := []struct {
+		name                 string
+		cfg                  *Config
+		wantMinNameLength    int
+		wantMaxNameLength    int
+		wantNamingConvention string
+		wantCheckoutFirst    bool
+		wantRequireStepNames bool
+	}{
+		{
+			name:              "nil config",
+			cfg:               nil,
+			wantMinNameLength: 3,
+			wantMaxNameLength: 50,
+		},
+		{
+			name:              "empty config",
+			cfg:               &Config{},
+			wantMinNameLength: 3,
+			wantMaxNameLength: 50,
+		},
+		{
+			name: "full settings",
+			cfg: &Config{
+				Linters: &LinterConfig{
+					Settings: map[string]any{
+						"style": map[string]any{
+							"min-name-length":    5,
+							"max-name-length":    100,
+							"naming-convention":  "title",
+							"checkout-first":     true,
+							"require-step-names": true,
+						},
+					},
+				},
+			},
+			wantMinNameLength:    5,
+			wantMaxNameLength:    100,
+			wantNamingConvention: "title",
+			wantCheckoutFirst:    true,
+			wantRequireStepNames: true,
+		},
+		{
+			name: "partial settings",
+			cfg: &Config{
+				Linters: &LinterConfig{
+					Settings: map[string]any{
+						"style": map[string]any{
+							"checkout-first": true,
+						},
+					},
+				},
+			},
+			wantMinNameLength: 3,
+			wantMaxNameLength: 50,
+			wantCheckoutFirst: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := tt.cfg.GetStyleSettings()
+			if settings.MinNameLength != tt.wantMinNameLength {
+				t.Errorf("MinNameLength = %d, want %d", settings.MinNameLength, tt.wantMinNameLength)
+			}
+			if settings.MaxNameLength != tt.wantMaxNameLength {
+				t.Errorf("MaxNameLength = %d, want %d", settings.MaxNameLength, tt.wantMaxNameLength)
+			}
+			if settings.NamingConvention != tt.wantNamingConvention {
+				t.Errorf("NamingConvention = %q, want %q", settings.NamingConvention, tt.wantNamingConvention)
+			}
+			if settings.CheckoutFirst != tt.wantCheckoutFirst {
+				t.Errorf("CheckoutFirst = %v, want %v", settings.CheckoutFirst, tt.wantCheckoutFirst)
+			}
+			if settings.RequireStepNames != tt.wantRequireStepNames {
+				t.Errorf("RequireStepNames = %v, want %v", settings.RequireStepNames, tt.wantRequireStepNames)
+			}
+		})
+	}
+}
+
 func TestShouldUpdate(t *testing.T) {
 	tests := []struct {
 		name           string

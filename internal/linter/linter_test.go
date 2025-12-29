@@ -10,41 +10,6 @@ import (
 	"github.com/reugn/github-ci/internal/workflow"
 )
 
-func TestIssue_Key(t *testing.T) {
-	issue := &Issue{File: "test.yml", Line: 10, Linter: "format", Message: "test message"}
-	key := issue.Key()
-	want := "test.yml:10:format:test message"
-	if key != want {
-		t.Errorf("Key() = %q, want %q", key, want)
-	}
-}
-
-func TestIssue_String(t *testing.T) {
-	tests := []struct {
-		name  string
-		issue *Issue
-		want  string
-	}{
-		{
-			name:  "with line number",
-			issue: &Issue{File: "test.yml", Line: 10, Linter: "format", Message: "test"},
-			want:  "test.yml:10: (format) test",
-		},
-		{
-			name:  "without line number",
-			issue: &Issue{File: "test.yml", Line: 0, Linter: "permissions", Message: "missing"},
-			want:  "test.yml: (permissions) missing",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.issue.String(); got != tt.want {
-				t.Errorf("String() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
 	tmpDir := t.TempDir()
 	_ = testutil.CreateWorkflow(t, tmpDir, "test.yml", `
@@ -145,7 +110,7 @@ jobs:
 func TestWorkflowLinter_LintCleanWorkflow(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create a workflow with no issues (has permissions, uses commit hash)
+	// Create a workflow with no issues (has permissions, uses commit hash, has step names)
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", `
 name: Test
 on: push
@@ -154,7 +119,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 `)
 
 	wf, err := workflow.LoadWorkflow(workflowPath)

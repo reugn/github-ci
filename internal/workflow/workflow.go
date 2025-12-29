@@ -37,6 +37,11 @@ func (w *Workflow) Lines() []string {
 	return strings.Split(string(w.RawBytes), "\n")
 }
 
+// BaseName returns the base name of the workflow file.
+func (w *Workflow) BaseName() string {
+	return filepath.Base(w.File)
+}
+
 // LoadWorkflows loads all workflow files from the specified directory.
 func LoadWorkflows(dir string) ([]*Workflow, error) {
 	entries, err := os.ReadDir(dir)
@@ -259,4 +264,89 @@ func isVersionTag(s string) bool {
 		return true
 	}
 	return false
+}
+
+// FindJobLine finds the line number where a job is defined.
+func (w *Workflow) FindJobLine(jobID string) int {
+	lines := w.Lines()
+	prefix := "  " + jobID + ":"
+	for i, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// FindStepLine finds the line number where a step is defined within a job.
+func (w *Workflow) FindStepLine(jobID string, stepIndex int) int {
+	lines := w.Lines()
+	inJob := false
+	inSteps := false
+	stepCount := 0
+	jobPrefix := "  " + jobID + ":"
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, jobPrefix) {
+			inJob = true
+			continue
+		}
+
+		if inJob {
+			trimmed := strings.TrimSpace(line)
+			// Check if we've exited the job
+			if len(line) > 0 && !strings.HasPrefix(line, " ") {
+				break
+			}
+			if strings.HasPrefix(trimmed, "steps:") {
+				inSteps = true
+				continue
+			}
+			if inSteps && strings.HasPrefix(trimmed, "- ") {
+				if stepCount == stepIndex {
+					return i + 1
+				}
+				stepCount++
+			}
+		}
+	}
+
+	return 0
+}
+
+// ExtractWorkflowEnv extracts workflow-level env variable names.
+func (w *Workflow) ExtractWorkflowEnv() map[string]bool {
+	result := make(map[string]bool)
+	lines := w.Lines()
+	inEnv := false
+	envIndent := 0
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		indent := len(line) - len(strings.TrimLeft(line, " "))
+
+		// Check for top-level env:
+		if trimmed == "env:" && indent == 0 {
+			inEnv = true
+			envIndent = indent
+			continue
+		}
+
+		if inEnv {
+			// Exit env block if we hit a top-level key
+			if indent == 0 && trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				break
+			}
+
+			// Extract env var name
+			if indent > envIndent && strings.Contains(trimmed, ":") {
+				parts := strings.SplitN(trimmed, ":", 2)
+				if len(parts) > 0 {
+					result[strings.TrimSpace(parts[0])] = true
+				}
+			}
+		}
+	}
+
+	return result
 }

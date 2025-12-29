@@ -23,6 +23,7 @@ A CLI tool for managing GitHub Actions workflows. It helps lint workflows for be
   - **format**: Formatting issues (indentation, line length, trailing whitespace)
   - **secrets**: Hardcoded secrets and sensitive information
   - **injection**: Shell injection vulnerabilities from untrusted input
+  - **style**: Naming conventions and style best practices
 - **Auto-fix Issues**: Automatically fix formatting issues and replace version tags with commit hashes
 - **Upgrade Actions**: Discover and upgrade GitHub Actions to their latest versions based on semantic versioning patterns
 - **Config Management**: Configure linters and version update patterns via `.github-ci.yaml`

@@ -3,7 +3,6 @@ package linter
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/reugn/github-ci/internal/config"
@@ -18,12 +17,15 @@ type FormatLinter struct {
 
 // NewFormatLinter creates a new FormatLinter instance.
 func NewFormatLinter(settings *config.FormatSettings) *FormatLinter {
+	if settings == nil {
+		settings = config.DefaultFormatSettings()
+	}
 	return &FormatLinter{settings: settings}
 }
 
 // LintWorkflow checks a single workflow for formatting issues.
 func (l *FormatLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
-	file := filepath.Base(wf.File)
+	file := wf.BaseName()
 	lines := wf.Lines()
 	minIndent := l.findMinIndentation(lines)
 
@@ -38,24 +40,16 @@ func (l *FormatLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 		trimmed := strings.TrimSpace(line)
 		isBlank := trimmed == ""
 		isComment := strings.HasPrefix(trimmed, "#")
-		leadingSpaces := countLeadingSpaces(line)
+		leadingSpaces := stringutil.CountLeadingSpaces(line)
 
 		// Check multiple consecutive blank lines
 		if isBlank && prevWasBlank {
-			issues = append(issues, &Issue{
-				File:    file,
-				Line:    lineNum,
-				Message: "Multiple consecutive blank lines found",
-			})
+			issues = append(issues, newIssue(file, lineNum, "Multiple consecutive blank lines found"))
 		}
 
 		// Check trailing whitespace
-		if hasTrailingWhitespace(line) {
-			issues = append(issues, &Issue{
-				File:    file,
-				Line:    lineNum,
-				Message: "Line has trailing whitespace",
-			})
+		if stringutil.HasTrailingWhitespace(line) {
+			issues = append(issues, newIssue(file, lineNum, "Line has trailing whitespace"))
 		}
 
 		// Check line length
@@ -83,11 +77,8 @@ func (l *FormatLinter) checkLineLength(line, file string, lineNum int) *Issue {
 		return nil
 	}
 	if len(line) > l.settings.MaxLineLength {
-		return &Issue{
-			File:    file,
-			Line:    lineNum,
-			Message: fmt.Sprintf("Line exceeds maximum length of %d characters (found %d)", l.settings.MaxLineLength, len(line)),
-		}
+		message := fmt.Sprintf("Line exceeds maximum length of %d characters (found %d)", l.settings.MaxLineLength, len(line))
+		return newIssue(file, lineNum, message)
 	}
 	return nil
 }
@@ -98,50 +89,28 @@ func (l *FormatLinter) checkIndentation(line, file string, lineNum, leadingSpace
 		return nil
 	}
 
+	var message string
+	switch {
 	// Check for tabs
-	if strings.HasPrefix(line, "\t") {
-		return &Issue{
-			File: file,
-			Line: lineNum,
-			Message: fmt.Sprintf("Line uses tabs for indentation, expected %d spaces",
-				l.settings.IndentWidth),
-		}
-	}
-
+	case strings.HasPrefix(line, "\t"):
+		message = fmt.Sprintf("Line uses tabs for indentation, expected %d spaces",
+			l.settings.IndentWidth)
 	// Check indentation is multiple of indent-width
-	if leadingSpaces > 0 && leadingSpaces%l.settings.IndentWidth != 0 {
-		return &Issue{
-			File: file,
-			Line: lineNum,
-			Message: fmt.Sprintf("Line indentation is %d spaces, expected multiple of %d",
-				leadingSpaces, l.settings.IndentWidth),
-		}
-	}
-
+	case leadingSpaces > 0 && leadingSpaces%l.settings.IndentWidth != 0:
+		message = fmt.Sprintf("Line indentation is %d spaces, expected multiple of %d",
+			leadingSpaces, l.settings.IndentWidth)
 	// Check base indentation level
-	if minIndent > 0 && minIndent != l.settings.IndentWidth && leadingSpaces == minIndent {
-		return &Issue{
-			File: file,
-			Line: lineNum,
-			Message: fmt.Sprintf("Line uses %d spaces for base indentation, expected %d spaces",
-				leadingSpaces, l.settings.IndentWidth),
-		}
-	}
-
+	case minIndent > 0 && minIndent != l.settings.IndentWidth && leadingSpaces == minIndent:
+		message = fmt.Sprintf("Line uses %d spaces for base indentation, expected %d spaces",
+			leadingSpaces, l.settings.IndentWidth)
 	// Check indentation increase is exactly indent-width
-	if leadingSpaces > prevIndent {
+	case leadingSpaces > prevIndent && (leadingSpaces-prevIndent) != l.settings.IndentWidth:
 		increase := leadingSpaces - prevIndent
-		if increase != l.settings.IndentWidth {
-			return &Issue{
-				File: file,
-				Line: lineNum,
-				Message: fmt.Sprintf("Line indentation increased by %d spaces, expected increase of %d (should be %d spaces)",
-					increase, l.settings.IndentWidth, prevIndent+l.settings.IndentWidth),
-			}
-		}
+		message = fmt.Sprintf("Line indentation increased by %d spaces, expected increase of %d (should be %d spaces)",
+			increase, l.settings.IndentWidth, prevIndent+l.settings.IndentWidth)
 	}
 
-	return nil
+	return newIssue(file, lineNum, message)
 }
 
 // findMinIndentation finds the minimum non-zero indentation in the file.
@@ -151,7 +120,7 @@ func (l *FormatLinter) findMinIndentation(lines []string) int {
 		if stringutil.IsBlankOrComment(line) {
 			continue
 		}
-		if spaces := countLeadingSpaces(line); spaces > 0 {
+		if spaces := stringutil.CountLeadingSpaces(line); spaces > 0 {
 			if minIndent == -1 || spaces < minIndent {
 				minIndent = spaces
 			}
@@ -205,7 +174,7 @@ func (l *FormatLinter) fixLines(lines []string) []string {
 
 		fixed = append(fixed, line)
 		prevWasBlank = false
-		prevIndent = countLeadingSpaces(line)
+		prevIndent = stringutil.CountLeadingSpaces(line)
 	}
 
 	return fixed
@@ -221,7 +190,7 @@ func (l *FormatLinter) fixIndentation(line string, prevIndent int) string {
 		return line
 	}
 
-	leadingSpaces := countLeadingSpaces(line)
+	leadingSpaces := stringutil.CountLeadingSpaces(line)
 	if leadingSpaces <= prevIndent {
 		return line
 	}
@@ -234,14 +203,4 @@ func (l *FormatLinter) fixIndentation(line string, prevIndent int) string {
 	// Reduce to correct indentation
 	correctIndent := prevIndent + l.settings.IndentWidth
 	return strings.Repeat(" ", correctIndent) + strings.TrimLeft(line, " \t")
-}
-
-// countLeadingSpaces returns the number of leading spaces in a line.
-func countLeadingSpaces(line string) int {
-	return len(line) - len(strings.TrimLeft(line, " "))
-}
-
-// hasTrailingWhitespace checks if a line ends with spaces or tabs.
-func hasTrailingWhitespace(line string) bool {
-	return strings.HasSuffix(line, " ") || strings.HasSuffix(line, "\t")
 }

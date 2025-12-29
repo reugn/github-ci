@@ -90,6 +90,7 @@ Not all linters support `--fix`. Currently supported:
 | permissions | ✗ |
 | secrets | ✗ |
 | injection | ✗ |
+| style | ✗ |
 
 ### Fix Transformation Example
 

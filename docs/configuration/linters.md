@@ -60,7 +60,7 @@ linters:
 
 ### settings
 
-Per-linter settings. Currently only `format` linter has configurable settings.
+Per-linter settings. The `format` and `style` linters have configurable settings.
 
 ## Available Linters
 
@@ -71,6 +71,7 @@ Per-linter settings. Currently only `format` linter has configurable settings.
 | `format` | Formatting issues | ✓ |
 | `secrets` | Hardcoded secrets | ✗ |
 | `injection` | Shell injection vulnerabilities | ✗ |
+| `style` | Naming conventions and style best practices | ✗ |
 
 ## Format Linter Settings
 
@@ -86,6 +87,27 @@ linters:
 |---------|---------|-------------|
 | `indent-width` | `2` | Expected number of spaces per indentation level |
 | `max-line-length` | `120` | Maximum allowed line length |
+
+## Style Linter Settings
+
+```yaml
+linters:
+  settings:
+    style:
+      min-name-length: 3        # Minimum name length
+      max-name-length: 50       # Maximum name length
+      naming-convention: ""     # "title", "sentence", or ""
+      checkout-first: false     # Check if checkout is first step
+      require-step-names: false # Require all steps to have names
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `min-name-length` | `3` | Minimum characters for names |
+| `max-name-length` | `50` | Maximum characters for names |
+| `naming-convention` | `""` | `"title"` (Every Word Uppercase), `"sentence"` (First word only), or `""` (none) |
+| `checkout-first` | `false` | Warn if checkout is not first step |
+| `require-step-names` | `false` | Require all steps to have names |
 
 ## Examples
 

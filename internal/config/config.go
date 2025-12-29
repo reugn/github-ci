@@ -82,12 +82,6 @@ type LinterConfig struct {
 	Settings map[string]any `yaml:"settings"` // Per-linter settings
 }
 
-// FormatSettings contains settings for the format linter.
-type FormatSettings struct {
-	IndentWidth   int `yaml:"indent-width"`
-	MaxLineLength int `yaml:"max-line-length"`
-}
-
 // ActionConfig specifies the version update pattern for a GitHub Action.
 type ActionConfig struct {
 	Version string `yaml:"version"`

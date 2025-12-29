@@ -9,28 +9,6 @@ import (
 	"github.com/reugn/github-ci/internal/workflow"
 )
 
-// Issue represents a linting problem found in a workflow file.
-// It contains the file name, line number, linter name, and a descriptive message about the issue.
-type Issue struct {
-	File    string // Name of the workflow file with the issue
-	Line    int    // Line number where the issue was found (0 if not applicable)
-	Linter  string // Name of the linter that found this issue
-	Message string // Description of the linting issue
-}
-
-// Key returns a unique identifier for this issue.
-func (i *Issue) Key() string {
-	return fmt.Sprintf("%s:%d:%s:%s", i.File, i.Line, i.Linter, i.Message)
-}
-
-// String implements fmt.Stringer for Issue.
-func (i *Issue) String() string {
-	if i.Line > 0 {
-		return fmt.Sprintf("%s:%d: (%s) %s", i.File, i.Line, i.Linter, i.Message)
-	}
-	return fmt.Sprintf("%s: (%s) %s", i.File, i.Linter, i.Message)
-}
-
 // WorkflowLinter orchestrates multiple individual linters based on configuration.
 type WorkflowLinter struct {
 	ctx        context.Context      // Context for timeout/cancellation
@@ -81,17 +59,14 @@ func createLinters(ctx context.Context, cfg *config.Config) map[string]Linter {
 
 	// If config is nil, create all linters (default behavior)
 	if cfg == nil {
-		formatSettings := getFormatSettings(cfg)
 		linters[LinterVersions] = NewVersionsLinter(ctx)
 		linters[LinterPermissions] = NewPermissionsLinter()
-		linters[LinterFormat] = NewFormatLinter(formatSettings)
+		linters[LinterFormat] = NewFormatLinter(cfg.GetFormatSettings())
 		linters[LinterSecrets] = NewSecretsLinter()
 		linters[LinterInjection] = NewInjectionLinter()
+		linters[LinterStyle] = NewStyleLinter(cfg.GetStyleSettings())
 		return linters
 	}
-
-	// Get format settings from config, with defaults
-	formatSettings := getFormatSettings(cfg)
 
 	// Only create linters that are enabled according to the config
 	if cfg.IsLinterEnabled(LinterVersions) {
@@ -101,13 +76,16 @@ func createLinters(ctx context.Context, cfg *config.Config) map[string]Linter {
 		linters[LinterPermissions] = NewPermissionsLinter()
 	}
 	if cfg.IsLinterEnabled(LinterFormat) {
-		linters[LinterFormat] = NewFormatLinter(formatSettings)
+		linters[LinterFormat] = NewFormatLinter(cfg.GetFormatSettings())
 	}
 	if cfg.IsLinterEnabled(LinterSecrets) {
 		linters[LinterSecrets] = NewSecretsLinter()
 	}
 	if cfg.IsLinterEnabled(LinterInjection) {
 		linters[LinterInjection] = NewInjectionLinter()
+	}
+	if cfg.IsLinterEnabled(LinterStyle) {
+		linters[LinterStyle] = NewStyleLinter(cfg.GetStyleSettings())
 	}
 
 	return linters

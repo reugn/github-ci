@@ -18,6 +18,7 @@ layout: default
 | [format](format) | Formatting issues (indentation, line length, whitespace) | ✓ |
 | [secrets](secrets) | Hardcoded secrets and sensitive information | ✗ |
 | [injection](injection) | Shell injection vulnerabilities | ✗ |
+| [style](style) | Naming conventions and style best practices | ✗ |
 
 ## Enabling/Disabling Linters
 
@@ -68,3 +69,4 @@ Issues are displayed with file, line number, linter name, and message:
 
 - **versions**: Enforces pinned action versions
 - **format**: Maintains consistent formatting
+- **style**: Enforces naming conventions and best practices

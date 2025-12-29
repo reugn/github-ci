@@ -2,7 +2,6 @@ package linter
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -97,7 +96,7 @@ type lineContext struct {
 // LintWorkflow checks a single workflow for injection vulnerabilities.
 func (l *InjectionLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error) {
 	var issues []*Issue
-	file := filepath.Base(wf.File)
+	file := wf.BaseName()
 	lines := wf.Lines()
 	ctx := &lineContext{}
 
@@ -119,7 +118,7 @@ func (l *InjectionLinter) processLine(file string, lineNum int, line string, ctx
 		return nil
 	}
 
-	currentIndent := countLeadingSpaces(line)
+	currentIndent := stringutil.CountLeadingSpaces(line)
 
 	// Update context based on current line
 	l.updateContext(trimmed, currentIndent, ctx)
@@ -212,12 +211,19 @@ func extractRunContent(line string) string {
 	}
 
 	content := strings.TrimSpace(line[idx+offset:])
-	// Skip block scalar indicators
-	if content == "|" || content == "|-" || content == "|+" ||
-		content == ">" || content == ">-" || content == ">+" {
+	if isBlockScalarIndicator(content) {
 		return ""
 	}
 	return content
+}
+
+// isBlockScalarIndicator returns true if content is a YAML block scalar indicator.
+func isBlockScalarIndicator(content string) bool {
+	switch content {
+	case "|", "|-", "|+", ">", ">-", ">+":
+		return true
+	}
+	return false
 }
 
 // checkForInjection checks if a line contains dangerous GitHub context expressions.
@@ -231,15 +237,11 @@ func (l *InjectionLinter) checkForInjection(file string, lineNum int, line strin
 	for _, pattern := range dangerousPatterns {
 		if matches := pattern.FindStringSubmatch(line); len(matches) > 0 {
 			expr := matches[0]
-			return &Issue{
-				File: file,
-				Line: lineNum,
-				Message: fmt.Sprintf(
-					"Potential shell injection: %s in run command. "+
-						"Use an environment variable instead",
-					expr,
-				),
-			}
+			message := fmt.Sprintf(
+				"Potential shell injection: %s in run command. Use an environment variable instead",
+				expr,
+			)
+			return newIssue(file, lineNum, message)
 		}
 	}
 

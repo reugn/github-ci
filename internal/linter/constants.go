@@ -7,6 +7,7 @@ const (
 	LinterFormat      = "format"
 	LinterSecrets     = "secrets"
 	LinterInjection   = "injection"
+	LinterStyle       = "style"
 )
 
 // lintersWithAutoFix lists linters that support automatic fixing.
