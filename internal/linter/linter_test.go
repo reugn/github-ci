@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/reugn/github-ci/internal/config"
 	"github.com/reugn/github-ci/internal/testutil"
 	"github.com/reugn/github-ci/internal/workflow"
 )
@@ -137,7 +138,7 @@ jobs:
 	// Filter out format issues since we can't control exact formatting
 	var nonFormatIssues []*Issue
 	for _, issue := range issues {
-		if issue.Linter != LinterFormat {
+		if issue.Linter != config.LinterFormat {
 			nonFormatIssues = append(nonFormatIssues, issue)
 		}
 	}
@@ -233,7 +234,7 @@ jobs:
 	countFormat := func(issues []*Issue) int {
 		count := 0
 		for _, issue := range issues {
-			if issue.Linter == LinterFormat {
+			if issue.Linter == config.LinterFormat {
 				count++
 			}
 		}
@@ -291,11 +292,11 @@ func TestSupportsAutoFix(t *testing.T) {
 		linter string
 		want   bool
 	}{
-		{LinterVersions, true},
-		{LinterFormat, true},
-		{LinterPermissions, false},
-		{LinterSecrets, false},
-		{LinterInjection, false},
+		{config.LinterVersions, true},
+		{config.LinterFormat, true},
+		{config.LinterPermissions, false},
+		{config.LinterSecrets, false},
+		{config.LinterInjection, false},
 		{"unknown", false},
 	}
 

@@ -57,35 +57,10 @@ func NewWithWorkflows(ctx context.Context, workflows []*workflow.Workflow, confi
 func createLinters(ctx context.Context, cfg *config.Config) map[string]Linter {
 	linters := make(map[string]Linter)
 
-	// If config is nil, create all linters (default behavior)
-	if cfg == nil {
-		linters[LinterVersions] = NewVersionsLinter(ctx)
-		linters[LinterPermissions] = NewPermissionsLinter()
-		linters[LinterFormat] = NewFormatLinter(cfg.GetFormatSettings())
-		linters[LinterSecrets] = NewSecretsLinter()
-		linters[LinterInjection] = NewInjectionLinter()
-		linters[LinterStyle] = NewStyleLinter(cfg.GetStyleSettings())
-		return linters
-	}
-
-	// Only create linters that are enabled according to the config
-	if cfg.IsLinterEnabled(LinterVersions) {
-		linters[LinterVersions] = NewVersionsLinter(ctx)
-	}
-	if cfg.IsLinterEnabled(LinterPermissions) {
-		linters[LinterPermissions] = NewPermissionsLinter()
-	}
-	if cfg.IsLinterEnabled(LinterFormat) {
-		linters[LinterFormat] = NewFormatLinter(cfg.GetFormatSettings())
-	}
-	if cfg.IsLinterEnabled(LinterSecrets) {
-		linters[LinterSecrets] = NewSecretsLinter()
-	}
-	if cfg.IsLinterEnabled(LinterInjection) {
-		linters[LinterInjection] = NewInjectionLinter()
-	}
-	if cfg.IsLinterEnabled(LinterStyle) {
-		linters[LinterStyle] = NewStyleLinter(cfg.GetStyleSettings())
+	for name, factory := range linterFactories {
+		if cfg == nil || cfg.IsLinterEnabled(name) {
+			linters[name] = factory(ctx, cfg)
+		}
 	}
 
 	return linters
@@ -164,8 +139,8 @@ func (l *WorkflowLinter) GetCacheStats() actions.CacheStats {
 	if l.linters == nil {
 		return actions.CacheStats{}
 	}
-	if vl, ok := l.linters[LinterVersions].(*VersionsLinter); ok {
-		return vl.GetCacheStats()
+	if linter, ok := l.linters[config.LinterVersions]; ok {
+		return linter.(*VersionsLinter).GetCacheStats()
 	}
 	return actions.CacheStats{}
 }

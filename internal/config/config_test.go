@@ -462,10 +462,10 @@ func TestConfig_GetFormatSettings(t *testing.T) {
 			name: "custom settings",
 			cfg: &Config{
 				Linters: &LinterConfig{
-					Settings: map[string]any{
-						"format": map[string]any{
-							"indent-width":    4,
-							"max-line-length": 100,
+					Settings: &LinterSettings{
+						Format: &FormatSettings{
+							IndentWidth:   4,
+							MaxLineLength: 100,
 						},
 					},
 				},
@@ -477,9 +477,10 @@ func TestConfig_GetFormatSettings(t *testing.T) {
 			name: "partial settings",
 			cfg: &Config{
 				Linters: &LinterConfig{
-					Settings: map[string]any{
-						"format": map[string]any{
-							"indent-width": 4,
+					Settings: &LinterSettings{
+						Format: &FormatSettings{
+							IndentWidth:   4,
+							MaxLineLength: 120,
 						},
 					},
 				},
@@ -528,13 +529,13 @@ func TestConfig_GetStyleSettings(t *testing.T) {
 			name: "full settings",
 			cfg: &Config{
 				Linters: &LinterConfig{
-					Settings: map[string]any{
-						"style": map[string]any{
-							"min-name-length":    5,
-							"max-name-length":    100,
-							"naming-convention":  "title",
-							"checkout-first":     true,
-							"require-step-names": true,
+					Settings: &LinterSettings{
+						Style: &StyleSettings{
+							MinNameLength:    5,
+							MaxNameLength:    100,
+							NamingConvention: "title",
+							CheckoutFirst:    true,
+							RequireStepNames: true,
 						},
 					},
 				},
@@ -549,9 +550,11 @@ func TestConfig_GetStyleSettings(t *testing.T) {
 			name: "partial settings",
 			cfg: &Config{
 				Linters: &LinterConfig{
-					Settings: map[string]any{
-						"style": map[string]any{
-							"checkout-first": true,
+					Settings: &LinterSettings{
+						Style: &StyleSettings{
+							MinNameLength: 3,
+							MaxNameLength: 50,
+							CheckoutFirst: true,
 						},
 					},
 				},
@@ -619,6 +622,73 @@ func TestShouldUpdate(t *testing.T) {
 			if result != tt.expected {
 				t.Errorf("ShouldUpdate(%q, %q, %q) = %v, want %v",
 					tt.currentVersion, tt.newVersion, tt.pattern, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFullDefaultLinterConfig(t *testing.T) {
+	cfg := FullDefaultLinterConfig()
+
+	if cfg.Default != "all" {
+		t.Errorf("Default = %q, want %q", cfg.Default, "all")
+	}
+
+	// Should have all linters enabled
+	expectedLinters := []string{
+		LinterVersions, LinterPermissions, LinterFormat,
+		LinterSecrets, LinterInjection, LinterStyle,
+	}
+	if len(cfg.Enable) != len(expectedLinters) {
+		t.Errorf("Enable has %d linters, want %d", len(cfg.Enable), len(expectedLinters))
+	}
+
+	// Should have settings initialized
+	if cfg.Settings == nil {
+		t.Error("Settings is nil, want non-nil")
+	}
+	if cfg.Settings.Format == nil {
+		t.Error("Settings.Format is nil, want non-nil")
+	}
+	if cfg.Settings.Style == nil {
+		t.Error("Settings.Style is nil, want non-nil")
+	}
+}
+
+func TestUpgradeConfig_EnsureDefaults(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *UpgradeConfig
+		wantVer string
+	}{
+		{
+			name:    "nil actions and empty version",
+			config:  &UpgradeConfig{},
+			wantVer: "tag",
+		},
+		{
+			name:    "nil actions with existing version",
+			config:  &UpgradeConfig{Version: "hash"},
+			wantVer: "hash",
+		},
+		{
+			name: "existing actions with empty version",
+			config: &UpgradeConfig{
+				Actions: map[string]ActionConfig{"test": {Version: "^1.0.0"}},
+			},
+			wantVer: "tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.config.EnsureDefaults()
+
+			if tt.config.Actions == nil {
+				t.Error("Actions is nil after EnsureDefaults")
+			}
+			if tt.config.Version != tt.wantVer {
+				t.Errorf("Version = %q, want %q", tt.config.Version, tt.wantVer)
 			}
 		})
 	}

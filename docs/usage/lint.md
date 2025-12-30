@@ -24,6 +24,7 @@ The `lint` command scans GitHub Actions workflow files and checks for various is
 - **format**: Formatting issues (indentation, line length, trailing whitespace)
 - **secrets**: Hardcoded secrets and sensitive information
 - **injection**: Shell injection vulnerabilities from untrusted input
+- **style**: Naming conventions and style best practices
 
 ## Flags
 

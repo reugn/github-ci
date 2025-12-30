@@ -24,6 +24,7 @@ A CLI tool for managing GitHub Actions workflows. It helps you lint workflows fo
 | [format](linters/format) | Formatting issues (indentation, line length, whitespace) | ✓ |
 | [secrets](linters/secrets) | Hardcoded secrets and sensitive information | ✗ |
 | [injection](linters/injection) | Shell injection vulnerabilities from untrusted input | ✗ |
+| [style](linters/style) | Naming conventions and style best practices | ✗ |
 
 ## Quick Start
 

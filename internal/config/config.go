@@ -12,14 +12,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	// DefaultConfigFileName is the default name of the configuration file.
-	DefaultConfigFileName = ".github-ci.yaml"
-
-	defaultVersionPattern = "^1.0.0"
-	defaultUpgradeVersion = "tag"
-	defaultLinterDefault  = "all"
-)
+// DefaultConfigFileName is the default name of the configuration file.
+const DefaultConfigFileName = ".github-ci.yaml"
 
 // DefaultActionConfig is the default configuration for newly discovered actions.
 var DefaultActionConfig = ActionConfig{Version: defaultVersionPattern}
@@ -67,26 +61,6 @@ func (c *Config) GetIssuesExitCode() int {
 	return c.Run.IssuesExitCode
 }
 
-// UpgradeConfig specifies settings for the upgrade command.
-type UpgradeConfig struct {
-	Actions map[string]ActionConfig `yaml:"actions,omitempty"`
-	Version string                  `yaml:"version"` // "tag", "hash", or "major"
-}
-
-// LinterConfig specifies which linters to enable and their behavior.
-// Disabled linters take precedence over enabled linters.
-type LinterConfig struct {
-	Default  string         `yaml:"default"`  // "all" or "none"
-	Enable   []string       `yaml:"enable"`   // Linters to enable
-	Disable  []string       `yaml:"disable"`  // Linters to disable
-	Settings map[string]any `yaml:"settings"` // Per-linter settings
-}
-
-// ActionConfig specifies the version update pattern for a GitHub Action.
-type ActionConfig struct {
-	Version string `yaml:"version"`
-}
-
 // LoadConfig loads configuration from the specified file.
 // Returns defaults if file doesn't exist.
 func LoadConfig(filename string) (*Config, error) {
@@ -129,39 +103,30 @@ func SaveConfig(cfg *Config, filename string) error {
 // NewDefaultConfig creates a new Config with default values.
 func NewDefaultConfig() *Config {
 	return &Config{
-		Linters: &LinterConfig{
-			Default:  defaultLinterDefault,
-			Enable:   []string{"permissions", "versions"},
-			Settings: make(map[string]any),
-		},
-		Upgrade: &UpgradeConfig{
-			Actions: make(map[string]ActionConfig),
-			Version: defaultUpgradeVersion,
-		},
+		Linters: DefaultLinterConfig(),
+		Upgrade: DefaultUpgradeConfig(),
+	}
+}
+
+// NewFullDefaultConfig creates a new Config with all settings explicitly set to defaults.
+// This is useful for generating a complete configuration file with all options visible.
+func NewFullDefaultConfig() *Config {
+	return &Config{
+		Linters: FullDefaultLinterConfig(),
+		Upgrade: DefaultUpgradeConfig(),
 	}
 }
 
 // ensureDefaults initializes nil fields with default values.
 func (c *Config) ensureDefaults() {
 	if c.Linters == nil {
-		c.Linters = &LinterConfig{
-			Default: defaultLinterDefault,
-			Enable:  []string{"permissions", "versions"},
-		}
+		c.Linters = DefaultLinterConfig()
 	}
 
 	if c.Upgrade == nil {
-		c.Upgrade = &UpgradeConfig{
-			Actions: make(map[string]ActionConfig),
-			Version: defaultUpgradeVersion,
-		}
+		c.Upgrade = DefaultUpgradeConfig()
 	} else {
-		if c.Upgrade.Actions == nil {
-			c.Upgrade.Actions = make(map[string]ActionConfig)
-		}
-		if c.Upgrade.Version == "" {
-			c.Upgrade.Version = defaultUpgradeVersion
-		}
+		c.Upgrade.EnsureDefaults()
 	}
 }
 

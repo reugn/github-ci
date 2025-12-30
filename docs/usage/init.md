@@ -17,27 +17,39 @@ github-ci init [flags]
 
 ## Description
 
-The `init` command creates a `.github-ci.yaml` configuration file and scans your workflows to discover actions.
+The `init` command creates a `.github-ci.yaml` configuration file.
 
 This command:
 1. Creates `.github-ci.yaml` with default linter and upgrade settings
-2. Scans workflows to discover actions and adds them to the config
-3. Fails if config already exists (use `--update` to add new actions)
+2. Fails if config already exists (use `--update` to add new actions)
+
+Use `--defaults` to include all linter settings and scan workflows to discover actions.
 
 ## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--update` | `false` | Update existing config with new actions from workflows |
+| `--update`, `-u` | `false` | Update existing config with new actions from workflows |
+| `--defaults`, `-d` | `false` | Include all linter settings and discover actions from workflows |
 | `--path` | `.github/workflows` | Path to workflow directory or file |
 | `--config` | `.github-ci.yaml` | Path to configuration file |
 
 ## Examples
 
-### Create New Config
+### Create Minimal Config
 
 ```bash
 $ github-ci init
+
+✓ Created .github-ci.yaml
+```
+
+### Create Config with All Defaults and Actions
+
+Include all linter settings and discover actions from workflows:
+
+```bash
+$ github-ci init --defaults
 
 ✓ Created .github-ci.yaml with 4 action(s)
 ```
@@ -66,7 +78,19 @@ github-ci init --config my-config.yaml
 
 ## Generated Config
 
-The init command generates a config like this:
+The init command generates a minimal config by default:
+
+```yaml
+linters:
+  default: all
+  enable: []
+  disable: []
+upgrade:
+  actions: {}
+  version: tag
+```
+
+With `--defaults`, all linter settings and discovered actions are included:
 
 ```yaml
 linters:
@@ -74,7 +98,21 @@ linters:
   enable:
     - permissions
     - versions
-  settings: {}
+    - format
+    - secrets
+    - injection
+    - style
+  disable: []
+  settings:
+    format:
+      indent-width: 2
+      max-line-length: 120
+    style:
+      min-name-length: 3
+      max-name-length: 50
+      naming-convention: ""
+      checkout-first: false
+      require-step-names: false
 
 upgrade:
   version: tag

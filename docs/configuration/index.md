@@ -34,6 +34,7 @@ linters:
     - format
     - secrets
     - injection
+    - style
   disable: []   # linters to disable (overrides enable)
   settings:
     format:

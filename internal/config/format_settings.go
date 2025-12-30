@@ -23,35 +23,8 @@ func DefaultFormatSettings() *FormatSettings {
 
 // GetFormatSettings returns the format linter settings from config.
 func (c *Config) GetFormatSettings() *FormatSettings {
-	settings := DefaultFormatSettings()
-
-	if c == nil || c.Linters == nil || c.Linters.Settings == nil {
-		return settings
+	if c != nil && c.Linters != nil && c.Linters.Settings != nil && c.Linters.Settings.Format != nil {
+		return c.Linters.Settings.Format
 	}
-
-	formatMap, ok := c.Linters.Settings["format"].(map[string]any)
-	if !ok {
-		return settings
-	}
-
-	if v, ok := toInt(formatMap["indent-width"]); ok {
-		settings.IndentWidth = v
-	}
-	if v, ok := toInt(formatMap["max-line-length"]); ok {
-		settings.MaxLineLength = v
-	}
-
-	return settings
-}
-
-// toInt converts a value to int, handling both int and int64 from YAML unmarshaling.
-func toInt(v any) (int, bool) {
-	switch n := v.(type) {
-	case int:
-		return n, true
-	case int64:
-		return int(n), true
-	default:
-		return 0, false
-	}
+	return DefaultFormatSettings()
 }

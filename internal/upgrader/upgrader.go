@@ -6,7 +6,6 @@ import (
 
 	"github.com/reugn/github-ci/internal/actions"
 	"github.com/reugn/github-ci/internal/config"
-	"github.com/reugn/github-ci/internal/osutil"
 	"github.com/reugn/github-ci/internal/version"
 	"github.com/reugn/github-ci/internal/workflow"
 )
@@ -106,15 +105,15 @@ func (u *Upgrader) DryRun() error {
 	return nil
 }
 
-// loadAndInitConfig loads the config and initializes missing action entries.
-// Only saves the config if it already existed on disk.
+// loadAndInitConfig loads the config and initializes missing action entries in memory.
+// Does not save the config - use 'init --update' to persist new actions.
 func (u *Upgrader) loadAndInitConfig() (*config.Config, error) {
 	cfg, err := config.LoadConfig(u.configFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Discover actions and initialize config entries
+	// Discover actions and initialize config entries in memory
 	for _, wf := range u.workflows {
 		wfActions, err := wf.FindActions()
 		if err != nil {
@@ -126,13 +125,6 @@ func (u *Upgrader) loadAndInitConfig() (*config.Config, error) {
 			if cfg.Upgrade.Actions[name].Version == "" {
 				cfg.SetActionConfig(name, config.DefaultActionConfig)
 			}
-		}
-	}
-
-	// Only save if config file already existed
-	if osutil.FileExists(u.configFile) {
-		if err := config.SaveConfig(cfg, u.configFile); err != nil {
-			return nil, fmt.Errorf("failed to save config: %w", err)
 		}
 	}
 

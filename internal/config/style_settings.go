@@ -32,32 +32,8 @@ func DefaultStyleSettings() *StyleSettings {
 
 // GetStyleSettings returns the style linter settings from config.
 func (c *Config) GetStyleSettings() *StyleSettings {
-	settings := DefaultStyleSettings()
-
-	if c == nil || c.Linters == nil || c.Linters.Settings == nil {
-		return settings
+	if c != nil && c.Linters != nil && c.Linters.Settings != nil && c.Linters.Settings.Style != nil {
+		return c.Linters.Settings.Style
 	}
-
-	styleMap, ok := c.Linters.Settings["style"].(map[string]any)
-	if !ok {
-		return settings
-	}
-
-	if v, ok := toInt(styleMap["min-name-length"]); ok {
-		settings.MinNameLength = v
-	}
-	if v, ok := toInt(styleMap["max-name-length"]); ok {
-		settings.MaxNameLength = v
-	}
-	if v, ok := styleMap["naming-convention"].(string); ok {
-		settings.NamingConvention = v
-	}
-	if v, ok := styleMap["checkout-first"].(bool); ok {
-		settings.CheckoutFirst = v
-	}
-	if v, ok := styleMap["require-step-names"].(bool); ok {
-		settings.RequireStepNames = v
-	}
-
-	return settings
+	return DefaultStyleSettings()
 }
