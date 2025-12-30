@@ -3,6 +3,7 @@ package config
 const (
 	defaultMinNameLength = 3
 	defaultMaxNameLength = 50
+	defaultMaxRunLines   = 0 // 0 means disabled
 )
 
 // StyleSettings contains settings for the style linter.
@@ -20,6 +21,8 @@ type StyleSettings struct {
 	CheckoutFirst bool `yaml:"checkout-first"`
 	// RequireStepNames requires all steps to have explicit names
 	RequireStepNames bool `yaml:"require-step-names"`
+	// MaxRunLines is the maximum allowed lines in a run script (0 = disabled)
+	MaxRunLines int `yaml:"max-run-lines"`
 }
 
 // DefaultStyleSettings returns the default style linter settings.
@@ -27,6 +30,7 @@ func DefaultStyleSettings() *StyleSettings {
 	return &StyleSettings{
 		MinNameLength: defaultMinNameLength,
 		MaxNameLength: defaultMaxNameLength,
+		MaxRunLines:   defaultMaxRunLines,
 	}
 }
 

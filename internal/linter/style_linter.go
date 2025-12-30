@@ -160,6 +160,11 @@ func (l *StyleLinter) checkSteps(wf *workflow.Workflow, job map[string]any, file
 		if issue := l.checkNameFirst(lines, stepLine, file); issue != nil {
 			issues = append(issues, issue)
 		}
+
+		// Check run script length
+		if issue := l.checkRunLength(step, file, stepLine); issue != nil {
+			issues = append(issues, issue)
+		}
 	}
 
 	return issues
@@ -278,6 +283,27 @@ func (l *StyleLinter) checkNameFirst(lines []string, stepLine int, file string) 
 				return newIssue(file, stepLine, "Step 'name' should come first before other fields")
 			}
 		}
+	}
+
+	return nil
+}
+
+// checkRunLength checks if a run script exceeds the maximum line count.
+func (l *StyleLinter) checkRunLength(step map[string]any, file string, line int) *Issue {
+	if l.settings.MaxRunLines <= 0 {
+		return nil
+	}
+
+	runScript, ok := step["run"].(string)
+	if !ok || runScript == "" {
+		return nil
+	}
+
+	lineCount := strings.Count(strings.TrimSpace(runScript), "\n") + 1
+	if lineCount > l.settings.MaxRunLines {
+		msg := fmt.Sprintf("Run script has %d lines (max %d); consider extracting to a script file",
+			lineCount, l.settings.MaxRunLines)
+		return newIssue(file, line, msg)
 	}
 
 	return nil

@@ -113,6 +113,7 @@ linters:
       naming-convention: ""
       checkout-first: false
       require-step-names: false
+      max-run-lines: 0
 
 upgrade:
   version: tag

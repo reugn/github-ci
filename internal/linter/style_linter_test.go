@@ -1,6 +1,7 @@
 package linter
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -840,5 +841,125 @@ jobs:
 	}
 	if !found {
 		t.Error("Expected to find 'Job name too short' issue")
+	}
+}
+
+func TestStyleLinter_RunScriptLength(t *testing.T) {
+	tests := []struct {
+		name        string
+		maxLines    int
+		runScript   string
+		wantFlagged bool
+	}{
+		{
+			name:        "too long",
+			maxLines:    5,
+			runScript:   "echo 1\necho 2\necho 3\necho 4\necho 5\necho 6",
+			wantFlagged: true,
+		},
+		{
+			name:        "within limit",
+			maxLines:    5,
+			runScript:   "echo 1\necho 2\necho 3",
+			wantFlagged: false,
+		},
+		{
+			name:        "check disabled",
+			maxLines:    0,
+			runScript:   "echo 1\necho 2\necho 3\necho 4\necho 5\necho 6\necho 7\necho 8\necho 9\necho 10",
+			wantFlagged: false,
+		},
+		{
+			name:        "single line",
+			maxLines:    1,
+			runScript:   "echo hello",
+			wantFlagged: false,
+		},
+		{
+			name:        "exact boundary",
+			maxLines:    5,
+			runScript:   "echo 1\necho 2\necho 3\necho 4\necho 5",
+			wantFlagged: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			workflowPath := filepath.Join(tmpDir, "test.yml")
+
+			content := fmt.Sprintf(`name: Test Workflow
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Step
+        run: |
+          %s
+`, strings.ReplaceAll(tt.runScript, "\n", "\n          "))
+
+			if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+				t.Fatalf("Failed to write test workflow: %v", err)
+			}
+
+			wf, err := workflow.LoadWorkflow(workflowPath)
+			if err != nil {
+				t.Fatalf("LoadWorkflow() error = %v", err)
+			}
+
+			linter := NewStyleLinter(&config.StyleSettings{MaxRunLines: tt.maxLines})
+			issues, err := linter.LintWorkflow(wf)
+			if err != nil {
+				t.Fatalf("LintWorkflow() error = %v", err)
+			}
+
+			found := false
+			for _, issue := range issues {
+				if strings.Contains(issue.Message, "Run script has") {
+					found = true
+					break
+				}
+			}
+
+			if found != tt.wantFlagged {
+				t.Errorf("got flagged=%v, want flagged=%v", found, tt.wantFlagged)
+			}
+		})
+	}
+}
+
+func TestStyleLinter_RunScriptStepWithUsesOnly(t *testing.T) {
+	tmpDir := t.TempDir()
+	workflowPath := filepath.Join(tmpDir, "test.yml")
+
+	content := `name: Test Workflow
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+`
+	if err := os.WriteFile(workflowPath, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test workflow: %v", err)
+	}
+
+	wf, err := workflow.LoadWorkflow(workflowPath)
+	if err != nil {
+		t.Fatalf("LoadWorkflow() error = %v", err)
+	}
+
+	linter := NewStyleLinter(&config.StyleSettings{MaxRunLines: 1})
+	issues, err := linter.LintWorkflow(wf)
+	if err != nil {
+		t.Fatalf("LintWorkflow() error = %v", err)
+	}
+
+	for _, issue := range issues {
+		if strings.Contains(issue.Message, "Run script has") {
+			t.Error("Did not expect 'uses' step to trigger run script check")
+		}
 	}
 }

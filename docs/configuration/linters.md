@@ -99,6 +99,7 @@ linters:
       naming-convention: ""     # "title", "sentence", or ""
       checkout-first: false     # Check if checkout is first step
       require-step-names: false # Require all steps to have names
+      max-run-lines: 0          # Max lines in run scripts (0 = disabled)
 ```
 
 | Setting | Default | Description |
@@ -108,6 +109,7 @@ linters:
 | `naming-convention` | `""` | `"title"` (Every Word Uppercase), `"sentence"` (First word only), or `""` (none) |
 | `checkout-first` | `false` | Warn if checkout is not first step |
 | `require-step-names` | `false` | Require all steps to have names |
+| `max-run-lines` | `0` | Max lines in run scripts (0 = disabled) |
 
 ## Examples
 
