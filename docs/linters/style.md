@@ -29,6 +29,7 @@ Consistent styling:
 | **Name not first** | `name:` field not first in step definition |
 | **Checkout not first** | `actions/checkout` not the first step (optional) |
 | **Env shadowing** | Job-level env var shadows workflow-level env var |
+| **Run script too long** | Run script exceeds max lines (opt-in via `max-run-lines`) |
 
 ## Example Output
 
@@ -38,6 +39,7 @@ ci.yml:5: (style) Job 'j1' has cryptic ID and is missing a name
 ci.yml:10: (style) Step is missing a name
 ci.yml:15: (style) Step 'name' should come first before other fields
 ci.yml:8: (style) Job env var 'NODE_ENV' shadows workflow-level env var
+ci.yml:20: (style) Run script has 15 lines (max 10); consider extracting to a script file
 ```
 
 ## Auto-fix
@@ -57,6 +59,7 @@ linters:
       naming-convention: ""     # "title", "sentence", or "" (default: none)
       checkout-first: false     # Check checkout is first step (default: false)
       require-step-names: false # Require all steps to have names (default: false)
+      max-run-lines: 0          # Max lines in run scripts (default: 0 = disabled)
 ```
 
 ### min-name-length
@@ -119,6 +122,17 @@ When enabled, requires all steps to have explicit `name:` fields.
 | `true` | Warn on steps without names |
 
 Simple steps like `- run: go build` often don't need names. Enable this for stricter naming policies.
+
+### max-run-lines
+
+Maximum allowed lines in a `run:` script before suggesting extraction to a script file.
+
+| Value | Description |
+|-------|-------------|
+| `0` | Disabled (default) - no limit on run script length |
+| `10` | Warn if run script exceeds 10 lines |
+
+Long inline scripts are harder to maintain and test. Consider extracting them to a script file (e.g., `scripts/build.sh`) called from the workflow.
 
 ## Cryptic Job ID Detection
 
@@ -222,8 +236,38 @@ name: build and test
 name: Build And Test
 ```
 
+### Long Run Scripts
+
+```yaml
+# With max-run-lines: 10
+linters:
+  settings:
+    style:
+      max-run-lines: 10
+```
+
+```yaml
+# Bad - inline script is too long
+- name: Build and Deploy
+  run: |
+    npm install
+    npm run build
+    npm run test
+    docker build -t myapp .
+    docker push myapp
+    kubectl apply -f deploy.yaml
+    kubectl rollout status deployment/myapp
+    curl -X POST https://notify.example.com
+    echo "Done deploying"
+    ./cleanup.sh
+    # ... more lines
+
+# Good - extract to script file
+- name: Build and Deploy
+  run: ./scripts/build-and-deploy.sh
+```
+
 ## See Also
 
 - [Linters Configuration](../configuration/linters) - Configure style settings
 - [format](format) - For formatting checks (indentation, line length)
-
