@@ -20,16 +20,6 @@ const (
 	GitHubTokenEnvVar = "GITHUB_TOKEN" //nolint:gosec // Not a credential, just env var name
 )
 
-// Resolver defines the interface for GitHub Actions operations.
-type Resolver interface {
-	GetCommitHash(owner, repo, ref string) (string, error)
-	GetLatestVersion(owner, repo, currentVersion, versionPattern string) (string, string, error)
-	GetLatestVersionUnconstrained(owner, repo string) (string, string, error)
-	GetTagForCommit(owner, repo, commitHash string) (string, error)
-	GetLatestMinorVersion(owner, repo, majorVersion string) (string, string, error)
-	GetCacheStats() CacheStats
-}
-
 // tagInfo holds tag name and commit hash.
 type tagInfo struct {
 	tag  string
@@ -43,6 +33,9 @@ type Client struct {
 	cache      *Cache
 	clientOnce sync.Once
 }
+
+// Ensure Client implements Resolver
+var _ Resolver = (*Client)(nil)
 
 // NewClient creates a new Client instance with background context.
 func NewClient() *Client {
@@ -91,85 +84,31 @@ func (c *Client) GetCacheStats() CacheStats {
 	return c.cache.Stats()
 }
 
-// ActionInfo represents a parsed GitHub Action reference.
-type ActionInfo struct {
-	Owner      string
-	Repo       string
-	Path       string // Subdirectory path for composite actions (e.g., "upload-sarif")
-	Ref        string
-	CommitHash string
-	Tag        string
-}
+// paginateTags iterates through all repository tags, calling fn for each.
+// If fn returns false, pagination stops early.
+func (c *Client) paginateTags(owner, repo string, fn func(*github.RepositoryTag) bool) error {
+	client := c.getGitHubClient()
+	opts := &github.ListOptions{PerPage: 100}
 
-// ParseActionUses parses "owner/repo@ref" or "owner/repo/path@ref" into ActionInfo.
-// For composite actions like "github/codeql-action/upload-sarif@v2", the repo
-// is extracted as "codeql-action" and path as "upload-sarif".
-func ParseActionUses(uses string) (*ActionInfo, error) {
-	atIdx := strings.LastIndex(uses, "@")
-	if atIdx == -1 {
-		return nil, fmt.Errorf("invalid action format: %s", uses)
-	}
-
-	actionPath := uses[:atIdx]
-	ref := uses[atIdx+1:]
-
-	// Find first slash for owner
-	firstSlash := strings.Index(actionPath, "/")
-	if firstSlash == -1 {
-		return nil, fmt.Errorf("invalid action path: %s", actionPath)
-	}
-
-	owner := actionPath[:firstSlash]
-	rest := actionPath[firstSlash+1:]
-
-	// Check for second slash (composite action path)
-	secondSlash := strings.Index(rest, "/")
-	var repo, path string
-	if secondSlash == -1 {
-		// Simple case: owner/repo@ref
-		repo = rest
-	} else {
-		// Composite action: owner/repo/path@ref
-		repo = rest[:secondSlash]
-		path = rest[secondSlash+1:]
-	}
-
-	return &ActionInfo{
-		Owner: owner,
-		Repo:  repo,
-		Path:  path,
-		Ref:   ref,
-	}, nil
-}
-
-// IsCommitHash checks if a reference is a 40-char hex commit hash.
-func IsCommitHash(ref string) bool {
-	if len(ref) != 40 {
-		return false
-	}
-	for _, c := range ref {
-		isDigit := c >= '0' && c <= '9'
-		isLowerHex := c >= 'a' && c <= 'f'
-		isUpperHex := c >= 'A' && c <= 'F'
-		if !isDigit && !isLowerHex && !isUpperHex {
-			return false
+	for {
+		tags, resp, err := client.Repositories.ListTags(c.ctx, owner, repo, opts)
+		if err != nil {
+			return fmt.Errorf("failed to fetch tags: %w", err)
 		}
-	}
-	return true
-}
 
-// IsMajorVersionOnly checks if ref is only a major version (e.g., "v3" or "3").
-func IsMajorVersionOnly(ref string) bool {
-	ref = version.Normalize(ref)
-	if ref == "" {
-		return false
-	}
-	for _, c := range ref {
-		if c < '0' || c > '9' {
-			return false
+		for _, tag := range tags {
+			if !fn(tag) {
+				return nil
+			}
 		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
-	return true
+
+	return nil
 }
 
 // GetCommitHash resolves a Git reference to its commit hash.
@@ -185,17 +124,19 @@ func (c *Client) GetCommitHash(owner, repo, ref string) (string, error) {
 		if _, hash, err := c.GetLatestMinorVersion(owner, repo, ref); err == nil {
 			return hash, nil
 		}
+		// GetLatestMinorVersion failed; try as an exact tag or branch name
 	}
 
 	client := c.getGitHubClient()
 
-	// Try as tag first
-	if gitRef, _, err := client.Git.GetRef(c.ctx, owner, repo, "refs/tags/"+ref); err == nil && gitRef.Object != nil {
+	// Try as a tag first
+	gitRef, _, err := client.Git.GetRef(c.ctx, owner, repo, "refs/tags/"+ref)
+	if err == nil && gitRef.Object != nil {
 		return gitRef.Object.GetSHA(), nil
 	}
 
-	// Fall back to branch
-	gitRef, _, err := client.Git.GetRef(c.ctx, owner, repo, "refs/heads/"+ref)
+	// Fall back to a branch
+	gitRef, _, err = client.Git.GetRef(c.ctx, owner, repo, "refs/heads/"+ref)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch ref %s: %w", ref, err)
 	}
@@ -241,32 +182,19 @@ func (c *Client) GetLatestVersion(owner, repo, currentVersion, versionPattern st
 
 // fetchMatchingTags retrieves all tags matching the version pattern.
 func (c *Client) fetchMatchingTags(owner, repo, pattern string) ([]tagInfo, error) {
-	client := c.getGitHubClient()
-	opts := &github.ListOptions{PerPage: 100}
-
 	var matching []tagInfo
-	for {
-		tags, resp, err := client.Repositories.ListTags(c.ctx, owner, repo, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch tags: %w", err)
-		}
 
-		for _, tag := range tags {
-			if matchesVersionPattern(tag.GetName(), pattern) {
-				matching = append(matching, tagInfo{
-					tag:  tag.GetName(),
-					hash: tag.GetCommit().GetSHA(),
-				})
-			}
+	err := c.paginateTags(owner, repo, func(tag *github.RepositoryTag) bool {
+		if matchesVersionPattern(tag.GetName(), pattern) {
+			matching = append(matching, tagInfo{
+				tag:  tag.GetName(),
+				hash: tag.GetCommit().GetSHA(),
+			})
 		}
+		return true // continue
+	})
 
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-
-	return matching, nil
+	return matching, err
 }
 
 // GetLatestVersionUnconstrained fetches the semantically latest version.
@@ -309,29 +237,19 @@ func (c *Client) tryGetLatestRelease(owner, repo string) (string, string, bool) 
 
 // getLatestVersionFromTags finds the semantically latest tag by paginating through all tags.
 func (c *Client) getLatestVersionFromTags(owner, repo string, key VersionKey) (string, string, error) {
-	client := c.getGitHubClient()
-	opts := &github.ListOptions{PerPage: 100}
-
 	var latest *tagInfo
-	for {
-		tags, resp, err := client.Repositories.ListTags(c.ctx, owner, repo, opts)
-		if err != nil {
-			err = fmt.Errorf("failed to fetch tags: %w", err)
-			c.cache.SetUnconstrained(key, NewVersionResult("", "", err))
-			return "", "", err
-		}
 
-		for _, tag := range tags {
-			name := tag.GetName()
-			if latest == nil || version.Compare(name, latest.tag) > 0 {
-				latest = &tagInfo{tag: name, hash: tag.GetCommit().GetSHA()}
-			}
+	err := c.paginateTags(owner, repo, func(tag *github.RepositoryTag) bool {
+		name := tag.GetName()
+		if latest == nil || version.Compare(name, latest.tag) > 0 {
+			latest = &tagInfo{tag: name, hash: tag.GetCommit().GetSHA()}
 		}
+		return true // continue
+	})
 
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
+	if err != nil {
+		c.cache.SetUnconstrained(key, NewVersionResult("", "", err))
+		return "", "", err
 	}
 
 	if latest == nil {
@@ -346,28 +264,17 @@ func (c *Client) getLatestVersionFromTags(owner, repo string, key VersionKey) (s
 
 // GetTagForCommit finds which tag points to the given commit hash.
 func (c *Client) GetTagForCommit(owner, repo, commitHash string) (string, error) {
-	client := c.getGitHubClient()
-	opts := &github.ListOptions{PerPage: 100}
+	var found string
 
-	for {
-		tags, resp, err := client.Repositories.ListTags(c.ctx, owner, repo, opts)
-		if err != nil {
-			return "", fmt.Errorf("failed to fetch tags: %w", err)
+	err := c.paginateTags(owner, repo, func(tag *github.RepositoryTag) bool {
+		if tag.GetCommit().GetSHA() == commitHash {
+			found = tag.GetName()
+			return false // stop pagination
 		}
+		return true // continue
+	})
 
-		for _, tag := range tags {
-			if tag.GetCommit().GetSHA() == commitHash {
-				return tag.GetName(), nil
-			}
-		}
-
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-
-	return "", nil
+	return found, err
 }
 
 // GetLatestMinorVersion finds the latest minor version for a major version.
@@ -376,31 +283,21 @@ func (c *Client) GetLatestMinorVersion(owner, repo, majorVersion string) (string
 	majorVersion = version.Normalize(majorVersion)
 	prefix := "v" + majorVersion + "."
 
-	client := c.getGitHubClient()
-	opts := &github.ListOptions{PerPage: 100}
-
 	var latest *tagInfo
-	for {
-		tags, resp, err := client.Repositories.ListTags(c.ctx, owner, repo, opts)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to fetch tags: %w", err)
-		}
 
-		for _, tag := range tags {
-			name := tag.GetName()
-			// Match "vX." or exact "vX"
-			if strings.HasPrefix(name, prefix) || name == "v"+majorVersion {
-				info := &tagInfo{tag: name, hash: tag.GetCommit().GetSHA()}
-				if latest == nil || version.Compare(name, latest.tag) > 0 {
-					latest = info
-				}
+	err := c.paginateTags(owner, repo, func(tag *github.RepositoryTag) bool {
+		name := tag.GetName()
+		// Match "vX." or exact "vX"
+		if strings.HasPrefix(name, prefix) || name == "v"+majorVersion {
+			if latest == nil || version.Compare(name, latest.tag) > 0 {
+				latest = &tagInfo{tag: name, hash: tag.GetCommit().GetSHA()}
 			}
 		}
+		return true // continue
+	})
 
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
+	if err != nil {
+		return "", "", err
 	}
 
 	if latest == nil {

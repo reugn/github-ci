@@ -12,8 +12,8 @@ type CacheStats struct {
 // when the same action appears in multiple workflows.
 type Cache struct {
 	mu            sync.Mutex
-	constrained   map[string]VersionResult
-	unconstrained map[string]VersionResult
+	constrained   map[string]VersionResult // Results for configured actions with version patterns
+	unconstrained map[string]VersionResult // Results for unconfigured actions (absolute latest)
 	hits          int64
 	misses        int64
 }

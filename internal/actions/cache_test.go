@@ -248,6 +248,44 @@ func TestVersionKey_IsConstrained(t *testing.T) {
 	}
 }
 
+func TestCache_Stats(t *testing.T) {
+	cache := NewCache()
+
+	// Initial stats are zero
+	stats := cache.Stats()
+	if stats.Hits != 0 || stats.Misses != 0 {
+		t.Errorf("Initial stats = {Hits: %d, Misses: %d}, want {0, 0}", stats.Hits, stats.Misses)
+	}
+
+	// Create a miss and check the stats
+	key := NewConstrainedKey("owner", "repo", "v1.0.0", "^1.0.0")
+	cache.SetConstrained(key, NewVersionResult("v2.0.0", "abc123", nil))
+
+	stats = cache.Stats()
+	if stats.Hits != 0 || stats.Misses != 1 {
+		t.Errorf("After Set: stats = {Hits: %d, Misses: %d}, want {0, 1}", stats.Hits, stats.Misses)
+	}
+
+	// Get a hit and check the stats
+	_, ok := cache.GetConstrained(key)
+	if !ok {
+		t.Fatal("GetConstrained returned ok=false, expected true")
+	}
+
+	stats = cache.Stats()
+	if stats.Hits != 1 || stats.Misses != 1 {
+		t.Errorf("After Get: stats = {Hits: %d, Misses: %d}, want {1, 1}", stats.Hits, stats.Misses)
+	}
+
+	// Clear the cache and check the stats
+	cache.Clear()
+
+	stats = cache.Stats()
+	if stats.Hits != 0 || stats.Misses != 0 {
+		t.Errorf("After Clear: stats = {Hits: %d, Misses: %d}, want {0, 0}", stats.Hits, stats.Misses)
+	}
+}
+
 func TestVersionResult(t *testing.T) {
 	result := NewVersionResult("v1.0.0", "abc123", nil)
 	if result.Tag != "v1.0.0" {

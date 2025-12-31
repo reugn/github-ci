@@ -4,25 +4,24 @@ import "fmt"
 
 // VersionKey represents a cache key for version lookups.
 type VersionKey struct {
-	Owner          string
-	Repo           string
-	CurrentVersion string // Empty for unconstrained lookups
-	Pattern        string // Empty for unconstrained lookups
+	Owner   string
+	Repo    string
+	Ref     string // Current version reference (e.g., "v1.2.0"); empty for unconstrained
+	Pattern string // Version constraint (e.g., "^1.0.0"); empty for unconstrained
 }
 
 // NewConstrainedKey creates a key for constrained version lookups.
-// Constrained lookups consider the current version and pattern.
-func NewConstrainedKey(owner, repo, currentVersion, pattern string) VersionKey {
+func NewConstrainedKey(owner, repo, ref, pattern string) VersionKey {
 	return VersionKey{
-		Owner:          owner,
-		Repo:           repo,
-		CurrentVersion: currentVersion,
-		Pattern:        pattern,
+		Owner:   owner,
+		Repo:    repo,
+		Ref:     ref,
+		Pattern: pattern,
 	}
 }
 
 // NewUnconstrainedKey creates a key for unconstrained version lookups.
-// Unconstrained lookups just get the latest version for a repo.
+// Unconstrained lookups get the absolute latest version for a repo.
 func NewUnconstrainedKey(owner, repo string) VersionKey {
 	return VersionKey{
 		Owner: owner,
@@ -35,10 +34,10 @@ func (k VersionKey) String() string {
 	if !k.IsConstrained() {
 		return fmt.Sprintf("%s/%s", k.Owner, k.Repo)
 	}
-	return fmt.Sprintf("%s/%s:%s:%s", k.Owner, k.Repo, k.CurrentVersion, k.Pattern)
+	return fmt.Sprintf("%s/%s:%s:%s", k.Owner, k.Repo, k.Ref, k.Pattern)
 }
 
 // IsConstrained returns true if this is a constrained key.
 func (k VersionKey) IsConstrained() bool {
-	return k.CurrentVersion != "" || k.Pattern != ""
+	return k.Ref != "" || k.Pattern != ""
 }
