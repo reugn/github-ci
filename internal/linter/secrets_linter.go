@@ -30,7 +30,9 @@ var secretPatterns = []secretPattern{
 }
 
 // SecretsLinter checks for hardcoded secrets in workflow files.
-type SecretsLinter struct{}
+type SecretsLinter struct {
+	noOpFixer
+}
 
 // NewSecretsLinter creates a new SecretsLinter instance.
 func NewSecretsLinter() *SecretsLinter {
@@ -79,9 +81,4 @@ func isSecretReference(line string) bool {
 		return false
 	}
 	return strings.Contains(line, "secrets.") || strings.Contains(line, "env.")
-}
-
-// FixWorkflow is a no-op as secrets must be removed manually.
-func (l *SecretsLinter) FixWorkflow(_ *workflow.Workflow) error {
-	return nil
 }

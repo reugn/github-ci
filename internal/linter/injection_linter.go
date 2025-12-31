@@ -77,7 +77,9 @@ func initPatterns() {
 // InjectionLinter checks for shell injection vulnerabilities in workflow files.
 // It detects dangerous use of GitHub context expressions in run: commands
 // that could allow attackers to inject arbitrary commands.
-type InjectionLinter struct{}
+type InjectionLinter struct {
+	noOpFixer
+}
 
 // NewInjectionLinter creates a new InjectionLinter instance.
 func NewInjectionLinter() *InjectionLinter {
@@ -245,10 +247,5 @@ func (l *InjectionLinter) checkForInjection(file string, lineNum int, line strin
 		}
 	}
 
-	return nil
-}
-
-// FixWorkflow is a no-op as injection fixes require manual refactoring to use environment variables.
-func (l *InjectionLinter) FixWorkflow(_ *workflow.Workflow) error {
 	return nil
 }

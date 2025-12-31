@@ -19,6 +19,7 @@ const (
 
 // StyleLinter checks for style and naming convention issues in workflow files.
 type StyleLinter struct {
+	noOpFixer
 	settings *config.StyleSettings
 }
 
@@ -320,9 +321,4 @@ func extractJobEnv(job map[string]any) map[string]bool {
 		result[key] = true
 	}
 	return result
-}
-
-// FixWorkflow is a no-op as style issues require manual fixing.
-func (l *StyleLinter) FixWorkflow(_ *workflow.Workflow) error {
-	return nil
 }

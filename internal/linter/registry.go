@@ -4,7 +4,17 @@ import (
 	"context"
 
 	"github.com/reugn/github-ci/internal/config"
+	"github.com/reugn/github-ci/internal/workflow"
 )
+
+// noOpFixer can be embedded in linters to satisfy the Linter interface
+// when automatic fixing is not supported.
+type noOpFixer struct{}
+
+// FixWorkflow implements Linter.FixWorkflow as a no-op.
+func (noOpFixer) FixWorkflow(_ *workflow.Workflow) error {
+	return nil
+}
 
 // linterFactory creates a linter instance with the given context and config.
 type linterFactory func(ctx context.Context, cfg *config.Config) Linter

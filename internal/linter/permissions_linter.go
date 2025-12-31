@@ -5,7 +5,9 @@ import (
 )
 
 // PermissionsLinter checks for missing permissions configuration in workflows.
-type PermissionsLinter struct{}
+type PermissionsLinter struct {
+	noOpFixer
+}
 
 // NewPermissionsLinter creates a new PermissionsLinter instance.
 func NewPermissionsLinter() *PermissionsLinter {
@@ -19,10 +21,4 @@ func (l *PermissionsLinter) LintWorkflow(wf *workflow.Workflow) ([]*Issue, error
 		return []*Issue{issue}, nil
 	}
 	return nil, nil
-}
-
-// FixWorkflow is a no-op for permissions linter as it cannot automatically fix missing permissions.
-func (l *PermissionsLinter) FixWorkflow(_ *workflow.Workflow) error {
-	// Permissions cannot be automatically fixed - user must add them manually
-	return nil
 }
