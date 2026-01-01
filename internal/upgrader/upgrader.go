@@ -82,9 +82,9 @@ func (u *Upgrader) Upgrade() error {
 
 // DryRun shows what would be updated without modifying files.
 func (u *Upgrader) DryRun() error {
-	cfg, err := config.LoadConfig(u.configFile)
+	cfg, err := u.loadAndInitConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
 
 	updates, err := u.findUpdates(cfg)
@@ -161,10 +161,11 @@ func (u *Upgrader) checkForUpdate(cfg *config.Config, wf *workflow.Workflow,
 	action *workflow.Action) (*updateInfo, error) {
 	actionInfo, err := actions.ParseActionUses(action.Uses)
 	if err != nil {
-		return nil, nil // Skip unparseable actions
+		u.printWarning("skipping unparseable action %q", action.Uses)
+		return nil, nil
 	}
 
-	actionName := config.NormalizeActionName(action.Uses)
+	actionName := actionInfo.Name()
 	actionCfg := cfg.GetActionConfig(actionName)
 
 	currentVersion, warning := u.resolveCurrentVersion(actionInfo)
@@ -174,14 +175,14 @@ func (u *Upgrader) checkForUpdate(cfg *config.Config, wf *workflow.Workflow,
 		return nil, fmt.Errorf("failed to check %s: %w", actionName, err)
 	}
 
-	// Skip if current hash already points to the latest version
-	if actions.IsCommitHash(actionInfo.Ref) && actionInfo.Ref == latestHash {
-		return nil, nil
-	}
-
 	// Check if format change is needed (e.g., tag → hash)
 	versionFormat := cfg.GetVersionFormat()
-	formatNeedsUpdate := needsFormatChange(actionInfo.Ref, versionFormat)
+	formatNeedsUpdate := actionInfo.NeedsFormatChange(versionFormat)
+
+	// Skip if already at latest and format is correct
+	if !formatNeedsUpdate && actionInfo.IsAtLatest(latestTag, latestHash) {
+		return nil, nil
+	}
 
 	// Determine version pattern for update check
 	pattern := actionCfg.Version
@@ -203,7 +204,7 @@ func (u *Upgrader) checkForUpdate(cfg *config.Config, wf *workflow.Workflow,
 		CurrentTag:    currentVersion,
 		NewTag:        latestTag,
 		NewHash:       latestHash,
-		VersionFormat: cfg.GetVersionFormat(),
+		VersionFormat: versionFormat,
 		Warning:       warning,
 	}, nil
 }
@@ -242,12 +243,7 @@ func (u *Upgrader) applyUpdate(upd updateInfo) error {
 	newRef, comment := u.formatVersion(upd)
 
 	// Build the new uses string, preserving path for composite actions
-	var newUses string
-	if upd.ActionInfo.Path != "" {
-		newUses = fmt.Sprintf("%s/%s/%s@%s", upd.ActionInfo.Owner, upd.ActionInfo.Repo, upd.ActionInfo.Path, newRef)
-	} else {
-		newUses = fmt.Sprintf("%s/%s@%s", upd.ActionInfo.Owner, upd.ActionInfo.Repo, newRef)
-	}
+	newUses := upd.ActionInfo.FormatUses(newRef)
 	if err := upd.Workflow.UpdateActionUses(upd.Action.Uses, newUses, comment); err != nil {
 		return fmt.Errorf("failed to update action in %s: %w", upd.Workflow.File, err)
 	}
@@ -268,29 +264,9 @@ func (u *Upgrader) formatVersion(upd updateInfo) (newRef, comment string) {
 	}
 }
 
-// needsFormatChange checks if the current ref format differs from the desired format.
-func needsFormatChange(currentRef, desiredFormat string) bool {
-	isHash := actions.IsCommitHash(currentRef)
-
-	switch desiredFormat {
-	case "hash":
-		return !isHash // Need to change if current is not a hash
-	case "major":
-		// Need to change if current is a hash or a full version tag (e.g., v1.2.3)
-		if isHash {
-			return true
-		}
-		// Check if it's already a major-only tag (e.g., v1, v2)
-		return len(currentRef) > 0 && currentRef[0] == 'v' &&
-			len(currentRef) > 2 && (currentRef[2] == '.' || (len(currentRef) > 3 && currentRef[3] == '.'))
-	default: // "tag"
-		return isHash // Need to change if current is a hash
-	}
-}
-
 // printUpdate prints information about a pending update.
 func (u *Upgrader) printUpdate(upd updateInfo) {
-	actionName := config.NormalizeActionName(upd.Action.Uses)
+	actionName := upd.ActionInfo.Name()
 	fmt.Printf("  %s:%d\n", upd.Workflow.File, upd.Action.Line)
 	fmt.Printf("    %s\n", upd.Action.Uses)
 
@@ -305,6 +281,11 @@ func (u *Upgrader) printUpdate(upd updateInfo) {
 		fmt.Printf("    ⚠ Warning: %s\n", upd.Warning)
 	}
 	fmt.Println()
+}
+
+// printWarning prints a formatted warning message.
+func (u *Upgrader) printWarning(format string, args ...any) {
+	fmt.Printf("⚠ Warning: "+format+"\n", args...)
 }
 
 // GetCacheStats returns cache statistics for GitHub API calls.
