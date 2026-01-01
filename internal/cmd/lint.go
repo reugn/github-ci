@@ -67,7 +67,7 @@ func doLint(workflows []*workflow.Workflow, configFile string) int {
 
 	issues, err := l.Lint()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to lint workflows: %v\n", err)
+		printError("failed to lint workflows: %v", err)
 		return 1
 	}
 
@@ -97,14 +97,14 @@ func doLint(workflows []*workflow.Workflow, configFile string) int {
 func doLintWithFix(l *linter.WorkflowLinter, issues []*linter.Issue, issuesExitCode int) int {
 	// Apply fixes
 	if err := l.Fix(); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to fix workflows: %v\n", err)
+		printError("failed to fix workflows: %v", err)
 		return 1
 	}
 
 	// Re-lint to see what issues remain after fixing
 	remainingIssues, err := l.Lint()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to re-lint workflows: %v\n", err)
+		printError("failed to re-lint workflows: %v", err)
 		return 1
 	}
 

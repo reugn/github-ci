@@ -16,9 +16,14 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		printError("%v", err)
 		os.Exit(1)
 	}
+}
+
+// printError prints a formatted error message to stderr.
+func printError(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "✗ Error: "+format+"\n", args...)
 }
 
 func init() {

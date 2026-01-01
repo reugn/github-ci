@@ -1,10 +1,18 @@
 package config
 
+import (
+	"fmt"
+	"slices"
+)
+
 const (
 	defaultMinNameLength = 3
 	defaultMaxNameLength = 50
 	defaultMaxRunLines   = 0 // 0 means disabled
 )
+
+// Valid naming conventions.
+var validNamingConventions = []string{"title", "sentence"}
 
 // StyleSettings contains settings for the style linter.
 type StyleSettings struct {
@@ -23,6 +31,31 @@ type StyleSettings struct {
 	RequireStepNames bool `yaml:"require-step-names"`
 	// MaxRunLines is the maximum allowed lines in a run script (0 = disabled)
 	MaxRunLines int `yaml:"max-run-lines"`
+}
+
+// Validate checks StyleSettings for invalid values.
+func (s *StyleSettings) Validate() error {
+	if s == nil {
+		return nil
+	}
+	if s.MinNameLength < 0 {
+		return fmt.Errorf("style.min-name-length must be non-negative, got %d", s.MinNameLength)
+	}
+	if s.MaxNameLength < 0 {
+		return fmt.Errorf("style.max-name-length must be non-negative, got %d", s.MaxNameLength)
+	}
+	if s.MinNameLength > 0 && s.MaxNameLength > 0 && s.MinNameLength > s.MaxNameLength {
+		return fmt.Errorf("style.min-name-length (%d) cannot be greater than max-name-length (%d)",
+			s.MinNameLength, s.MaxNameLength)
+	}
+	if s.NamingConvention != "" && !slices.Contains(validNamingConventions, s.NamingConvention) {
+		return fmt.Errorf("style.naming-convention must be one of %v, got %q",
+			validNamingConventions, s.NamingConvention)
+	}
+	if s.MaxRunLines < 0 {
+		return fmt.Errorf("style.max-run-lines must be non-negative, got %d", s.MaxRunLines)
+	}
+	return nil
 }
 
 // DefaultStyleSettings returns the default style linter settings.

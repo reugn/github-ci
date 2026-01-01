@@ -17,8 +17,8 @@ func TestLoadConfig_NonExistent(t *testing.T) {
 	if cfg.Linters == nil {
 		t.Error("cfg.Linters is nil, want non-nil")
 	}
-	if cfg.Linters.Default != "all" {
-		t.Errorf("cfg.Linters.Default = %q, want %q", cfg.Linters.Default, "all")
+	if cfg.Linters.Default != defaultLinterDefault {
+		t.Errorf("cfg.Linters.Default = %q, want %q", cfg.Linters.Default, defaultLinterDefault)
 	}
 	if cfg.Upgrade == nil {
 		t.Error("cfg.Upgrade is nil, want non-nil")
@@ -39,7 +39,7 @@ linters:
   enable:
     - permissions
   disable:
-    - security
+    - secrets
   settings:
     format:
       indent-width: 4
@@ -65,8 +65,8 @@ upgrade:
 	if len(cfg.Linters.Enable) != 1 || cfg.Linters.Enable[0] != "permissions" {
 		t.Errorf("cfg.Linters.Enable = %v, want [permissions]", cfg.Linters.Enable)
 	}
-	if len(cfg.Linters.Disable) != 1 || cfg.Linters.Disable[0] != "security" {
-		t.Errorf("cfg.Linters.Disable = %v, want [security]", cfg.Linters.Disable)
+	if len(cfg.Linters.Disable) != 1 || cfg.Linters.Disable[0] != "secrets" {
+		t.Errorf("cfg.Linters.Disable = %v, want [secrets]", cfg.Linters.Disable)
 	}
 
 	// Check upgrade config
@@ -630,8 +630,8 @@ func TestShouldUpdate(t *testing.T) {
 func TestFullDefaultLinterConfig(t *testing.T) {
 	cfg := FullDefaultLinterConfig()
 
-	if cfg.Default != "all" {
-		t.Errorf("Default = %q, want %q", cfg.Default, "all")
+	if cfg.Default != defaultLinterDefault {
+		t.Errorf("Default = %q, want %q", cfg.Default, defaultLinterDefault)
 	}
 
 	// Should have all linters enabled
@@ -689,6 +689,132 @@ func TestUpgradeConfig_EnsureDefaults(t *testing.T) {
 			}
 			if tt.config.Version != tt.wantVer {
 				t.Errorf("Version = %q, want %q", tt.config.Version, tt.wantVer)
+			}
+		})
+	}
+}
+
+func TestConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *Config
+		wantErr bool
+	}{
+		{
+			name:    "valid empty config",
+			config:  &Config{},
+			wantErr: false,
+		},
+		{
+			name: "valid full config",
+			config: &Config{
+				Run:     &RunConfig{Timeout: "5m", IssuesExitCode: 2},
+				Linters: &LinterConfig{Default: "all", Enable: []string{"versions"}},
+				Upgrade: &UpgradeConfig{Version: "tag"},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "invalid timeout",
+			config:  &Config{Run: &RunConfig{Timeout: "invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid exit code too low",
+			config:  &Config{Run: &RunConfig{IssuesExitCode: -1}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid exit code too high",
+			config:  &Config{Run: &RunConfig{IssuesExitCode: 300}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid linter default",
+			config:  &Config{Linters: &LinterConfig{Default: "invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "unknown linter in enable",
+			config:  &Config{Linters: &LinterConfig{Enable: []string{"unknown"}}},
+			wantErr: true,
+		},
+		{
+			name:    "unknown linter in disable",
+			config:  &Config{Linters: &LinterConfig{Disable: []string{"unknown"}}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid upgrade version format",
+			config:  &Config{Upgrade: &UpgradeConfig{Version: "invalid"}},
+			wantErr: true,
+		},
+		{
+			name: "invalid format indent-width",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Format: &FormatSettings{IndentWidth: -1}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid format max-line-length",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Format: &FormatSettings{MaxLineLength: -1}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid style min-name-length negative",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Style: &StyleSettings{MinNameLength: -1}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid style max-name-length negative",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Style: &StyleSettings{MaxNameLength: -1}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid style max-run-lines negative",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Style: &StyleSettings{MaxRunLines: -1}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid style min > max name length",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Style: &StyleSettings{MinNameLength: 10, MaxNameLength: 5}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "invalid naming convention",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{Style: &StyleSettings{NamingConvention: "invalid"}},
+			}},
+			wantErr: true,
+		},
+		{
+			name: "valid settings",
+			config: &Config{Linters: &LinterConfig{
+				Settings: &LinterSettings{
+					Format: &FormatSettings{IndentWidth: 4, MaxLineLength: 100},
+					Style:  &StyleSettings{MinNameLength: 3, MaxNameLength: 50, NamingConvention: "title"},
+				},
+			}},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

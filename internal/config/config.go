@@ -25,10 +25,40 @@ type Config struct {
 	Upgrade *UpgradeConfig `yaml:"upgrade,omitempty"`
 }
 
+// Validate checks all configuration values for validity.
+func (c *Config) Validate() error {
+	if err := c.Run.Validate(); err != nil {
+		return err
+	}
+	if err := c.Linters.Validate(); err != nil {
+		return err
+	}
+	if err := c.Upgrade.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // RunConfig specifies general runtime settings.
 type RunConfig struct {
 	Timeout        string `yaml:"timeout"`          // Duration string (e.g., "2m", "30s")
 	IssuesExitCode int    `yaml:"issues-exit-code"` // Exit code when issues are found (default: 1)
+}
+
+// Validate checks RunConfig for invalid values.
+func (r *RunConfig) Validate() error {
+	if r == nil {
+		return nil
+	}
+	if r.Timeout != "" {
+		if _, err := time.ParseDuration(r.Timeout); err != nil {
+			return fmt.Errorf("invalid timeout %q: %w", r.Timeout, err)
+		}
+	}
+	if r.IssuesExitCode != 0 && (r.IssuesExitCode < 1 || r.IssuesExitCode > 255) {
+		return fmt.Errorf("issues-exit-code must be between 1 and 255, got %d", r.IssuesExitCode)
+	}
+	return nil
 }
 
 const (
@@ -41,7 +71,7 @@ const (
 // GetTimeout returns the configured timeout duration.
 // Returns DefaultTimeout if not configured or invalid.
 func (c *Config) GetTimeout() time.Duration {
-	if c.Run == nil || c.Run.Timeout == "" {
+	if c == nil || c.Run == nil || c.Run.Timeout == "" {
 		return DefaultTimeout
 	}
 	d, err := time.ParseDuration(c.Run.Timeout)
@@ -55,7 +85,7 @@ func (c *Config) GetTimeout() time.Duration {
 // Returns DefaultIssuesExitCode (1) if not configured or invalid.
 // Exit codes must be in range 1-255; values outside this range return the default.
 func (c *Config) GetIssuesExitCode() int {
-	if c.Run == nil || c.Run.IssuesExitCode <= 0 || c.Run.IssuesExitCode > 255 {
+	if c == nil || c.Run == nil || c.Run.IssuesExitCode <= 0 || c.Run.IssuesExitCode > 255 {
 		return DefaultIssuesExitCode
 	}
 	return c.Run.IssuesExitCode
@@ -80,6 +110,10 @@ func LoadConfig(filename string) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	cfg.ensureDefaults()
