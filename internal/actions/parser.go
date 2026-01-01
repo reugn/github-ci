@@ -15,6 +15,55 @@ type ActionInfo struct {
 	Ref   string // Git reference: tag (e.g., "v2"), commit hash, or branch name
 }
 
+// Name returns the normalized action name (owner/repo or owner/repo/path).
+func (a *ActionInfo) Name() string {
+	if a.Path != "" {
+		return a.Owner + "/" + a.Repo + "/" + a.Path
+	}
+	return a.Owner + "/" + a.Repo
+}
+
+// FormatUses returns the action uses string with the given ref (e.g., "owner/repo@ref").
+func (a *ActionInfo) FormatUses(ref string) string {
+	return a.Name() + "@" + ref
+}
+
+// IsAtLatest checks if the current ref points to the latest version.
+// Works for hashes, tags, and major versions.
+func (a *ActionInfo) IsAtLatest(latestTag, latestHash string) bool {
+	if IsCommitHash(a.Ref) {
+		return a.Ref == latestHash
+	}
+	// Exact tag match
+	if a.Ref == latestTag {
+		return true
+	}
+	// Major version match (e.g., v4 or 4 matches v4.2.1)
+	if IsMajorVersionOnly(a.Ref) {
+		major := version.Normalize(a.Ref)
+		prefix := "v" + major + "."
+		return strings.HasPrefix(latestTag, prefix) || latestTag == "v"+major
+	}
+	return false
+}
+
+// NeedsFormatChange checks if the current ref format differs from the desired format.
+func (a *ActionInfo) NeedsFormatChange(desiredFormat string) bool {
+	isHash := IsCommitHash(a.Ref)
+
+	switch desiredFormat {
+	case "hash":
+		return !isHash
+	case "major":
+		if isHash {
+			return true
+		}
+		return !IsMajorVersionOnly(a.Ref)
+	default: // "tag"
+		return isHash
+	}
+}
+
 // ParseActionUses parses "owner/repo@ref" or "owner/repo/path@ref" into ActionInfo.
 // For composite actions like "github/codeql-action/upload-sarif@v2", the repo
 // is extracted as "codeql-action" and path as "upload-sarif".
