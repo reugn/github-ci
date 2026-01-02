@@ -149,21 +149,21 @@ func (c *Client) GetCommitHash(owner, repo, ref string) (string, error) {
 
 // GetLatestVersion fetches the latest compatible tag and commit hash.
 // Results are cached.
-func (c *Client) GetLatestVersion(owner, repo, currentVersion, versionPattern string) (string, string, error) {
-	key := NewConstrainedKey(owner, repo, currentVersion, versionPattern)
+func (c *Client) GetLatestVersion(owner, repo, currentVersion, versionConstraint string) (string, string, error) {
+	key := NewConstrainedKey(owner, repo, currentVersion, versionConstraint)
 
 	if result, ok := c.cache.GetConstrained(key); ok {
 		return result.Tag, result.Hash, result.Err
 	}
 
-	tags, err := c.fetchMatchingTags(owner, repo, versionPattern)
+	tags, err := c.fetchMatchingTags(owner, repo, versionConstraint)
 	if err != nil {
 		c.cache.SetConstrained(key, NewVersionResult("", "", err))
 		return "", "", err
 	}
 
 	if len(tags) == 0 {
-		err := fmt.Errorf("no compatible tags found for pattern %s", versionPattern)
+		err := fmt.Errorf("no compatible tags found for constraint %s", versionConstraint)
 		c.cache.SetConstrained(key, NewVersionResult("", "", err))
 		return "", "", err
 	}
@@ -180,12 +180,12 @@ func (c *Client) GetLatestVersion(owner, repo, currentVersion, versionPattern st
 	return latest.tag, latest.hash, nil
 }
 
-// fetchMatchingTags retrieves all tags matching the version pattern.
-func (c *Client) fetchMatchingTags(owner, repo, pattern string) ([]tagInfo, error) {
+// fetchMatchingTags retrieves all tags matching the version constraint.
+func (c *Client) fetchMatchingTags(owner, repo, constraint string) ([]tagInfo, error) {
 	var matching []tagInfo
 
 	err := c.paginateTags(owner, repo, func(tag *github.RepositoryTag) bool {
-		if matchesVersionPattern(tag.GetName(), pattern) {
+		if matchesVersionConstraint(tag.GetName(), constraint) {
 			matching = append(matching, tagInfo{
 				tag:  tag.GetName(),
 				hash: tag.GetCommit().GetSHA(),
@@ -307,27 +307,27 @@ func (c *Client) GetLatestMinorVersion(owner, repo, majorVersion string) (string
 	return latest.tag, latest.hash, nil
 }
 
-// matchesVersionPattern checks if a tag matches the version pattern.
-func matchesVersionPattern(tagVersion, pattern string) bool {
-	if pattern == "" {
+// matchesVersionConstraint checks if a tag matches the version constraint.
+func matchesVersionConstraint(tagVersion, constraint string) bool {
+	if constraint == "" {
 		return true
 	}
 
-	if after, ok := strings.CutPrefix(pattern, "^"); ok {
-		patternMajor := version.ExtractMajor(after)
+	if after, ok := strings.CutPrefix(constraint, "^"); ok {
+		constraintMajor := version.ExtractMajor(after)
 		tagMajor := version.ExtractMajor(tagVersion)
 
 		// ^1.0.0 allows any version >= 1
-		if patternMajor == 1 {
+		if constraintMajor == 1 {
 			return tagMajor >= 1
 		}
-		return tagMajor == patternMajor
+		return tagMajor == constraintMajor
 	}
 
-	if after, ok := strings.CutPrefix(pattern, "~"); ok {
-		patternMajor, patternMinor := version.ExtractMajorMinor(after)
+	if after, ok := strings.CutPrefix(constraint, "~"); ok {
+		constraintMajor, constraintMinor := version.ExtractMajorMinor(after)
 		tagMajor, tagMinor := version.ExtractMajorMinor(tagVersion)
-		return tagMajor == patternMajor && tagMinor == patternMinor
+		return tagMajor == constraintMajor && tagMinor == constraintMinor
 	}
 
 	return false

@@ -42,12 +42,12 @@ linters:
       max-line-length: 120
 
 upgrade:
-  version: tag  # 'tag', 'major', or 'hash'
+  format: tag  # 'tag', 'major', or 'hash'
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
     actions/setup-go:
-      version: ~1.0.0
+      constraint: ~1.0.0
 ```
 
 ## Sections
@@ -56,14 +56,14 @@ upgrade:
 |---------|-------------|
 | [run](run) | Runtime settings (timeout, exit codes) |
 | [linters](linters) | Which linters to enable and their settings |
-| [upgrade](upgrade) | Version patterns for action upgrades |
+| [upgrade](upgrade) | Version constraints for action upgrades |
 
 ## Defaults
 
 If no configuration file exists:
 
 - All linters are enabled
-- Actions use `^1.0.0` version pattern (allow minor/patch updates)
+- Actions use `^1.0.0` version constraint (allow minor/patch updates)
 - Timeout is 5 minutes
 - Exit code for issues is 1
 - Version format is `tag`

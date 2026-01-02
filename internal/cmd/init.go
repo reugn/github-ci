@@ -25,7 +25,7 @@ If the configuration file already exists:
   - With --update: adds any new actions found in workflows to the config
 
 Use --defaults to include all linter settings and scan workflows to discover
-actions with default version patterns.`,
+actions with default version constraints.`,
 	RunE:         runInit,
 	SilenceUsage: true,
 }
@@ -137,8 +137,8 @@ func discoverActions(cfg *config.Config, workflows []*workflow.Workflow) []strin
 				continue
 			}
 
-			// Check if action already exists in config
-			if cfg.Upgrade.Actions[name].Version == "" {
+			// Add action if not already configured
+			if cfg.Upgrade.Actions[name].Constraint == "" {
 				cfg.SetActionConfig(name, config.DefaultActionConfig)
 				newActions = append(newActions, name)
 			}

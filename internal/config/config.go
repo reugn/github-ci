@@ -16,7 +16,7 @@ import (
 const DefaultConfigFileName = ".github-ci.yaml"
 
 // DefaultActionConfig is the default configuration for newly discovered actions.
-var DefaultActionConfig = ActionConfig{Version: defaultVersionPattern}
+var DefaultActionConfig = ActionConfig{Constraint: defaultVersionConstraint}
 
 // Config represents the GitHub CI configuration file structure.
 type Config struct {
@@ -171,7 +171,7 @@ func (c *Config) GetActionConfig(actionName string) ActionConfig {
 			return cfg
 		}
 	}
-	return ActionConfig{Version: defaultVersionPattern}
+	return ActionConfig{Constraint: defaultVersionConstraint}
 }
 
 // SetActionConfig sets the configuration for an action.
@@ -183,10 +183,10 @@ func (c *Config) SetActionConfig(actionName string, cfg ActionConfig) {
 // GetVersionFormat returns the version format for upgrades: "tag", "hash", or "major".
 // Defaults to "tag" if not specified.
 func (c *Config) GetVersionFormat() string {
-	if c.Upgrade == nil || c.Upgrade.Version == "" {
-		return defaultUpgradeVersion
+	if c.Upgrade == nil || c.Upgrade.Format == "" {
+		return defaultUpgradeFormat
 	}
-	return c.Upgrade.Version
+	return c.Upgrade.Format
 }
 
 // IsLinterEnabled checks if a linter is enabled based on configuration.
@@ -215,48 +215,48 @@ func NormalizeActionName(uses string) string {
 }
 
 // ShouldUpdate determines if a version update should be applied.
-// Patterns:
+// Constraints:
 //   - "": any newer version
 //   - "^X.0.0": same major version (X.y.z)
 //   - "~X.Y.0": same major.minor version (X.Y.z)
-func ShouldUpdate(currentVersion, newVersion, pattern string) bool {
+func ShouldUpdate(currentVersion, newVersion, constraint string) bool {
 	if version.Compare(newVersion, currentVersion) <= 0 {
 		return false
 	}
 
-	if pattern == "" {
+	if constraint == "" {
 		return true
 	}
 
-	if after, ok := strings.CutPrefix(pattern, "^"); ok {
-		return matchesMajorPattern(newVersion, after)
+	if after, ok := strings.CutPrefix(constraint, "^"); ok {
+		return matchesMajorConstraint(newVersion, after)
 	}
 
-	if after, ok := strings.CutPrefix(pattern, "~"); ok {
-		return matchesMinorPattern(newVersion, after)
+	if after, ok := strings.CutPrefix(constraint, "~"); ok {
+		return matchesMinorConstraint(newVersion, after)
 	}
 
 	return false
 }
 
-// matchesMajorPattern checks if version matches ^X.0.0 pattern.
-func matchesMajorPattern(newVersion, patternVersion string) bool {
-	patternMajor := version.ExtractMajor(patternVersion)
+// matchesMajorConstraint checks if version matches ^X.0.0 constraint.
+func matchesMajorConstraint(newVersion, constraintVersion string) bool {
+	constraintMajor := version.ExtractMajor(constraintVersion)
 	newMajor := version.ExtractMajor(newVersion)
 
 	// ^1.0.0 is special: allows any version >= 1.0.0
-	if patternMajor == 1 {
+	if constraintMajor == 1 {
 		return newMajor >= 1
 	}
 
 	// Otherwise: same major version only
-	return newMajor == patternMajor
+	return newMajor == constraintMajor
 }
 
-// matchesMinorPattern checks if version matches ~X.Y.0 pattern.
-func matchesMinorPattern(newVersion, patternVersion string) bool {
-	patternMajor, patternMinor := version.ExtractMajorMinor(patternVersion)
+// matchesMinorConstraint checks if version matches ~X.Y.0 constraint.
+func matchesMinorConstraint(newVersion, constraintVersion string) bool {
+	constraintMajor, constraintMinor := version.ExtractMajorMinor(constraintVersion)
 	newMajor, newMinor := version.ExtractMajorMinor(newVersion)
 
-	return newMajor == patternMajor && newMinor == patternMinor
+	return newMajor == constraintMajor && newMinor == constraintMinor
 }

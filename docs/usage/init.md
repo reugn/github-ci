@@ -87,7 +87,7 @@ linters:
   disable: []
 upgrade:
   actions: {}
-  version: tag
+  format: tag
 ```
 
 With `--defaults`, all linter settings and discovered actions are included:
@@ -116,12 +116,12 @@ linters:
       max-run-lines: 0
 
 upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
     actions/setup-go:
-      version: ^1.0.0
+      constraint: ^1.0.0
 ```
 
 See [Configuration](../configuration/) for details on customizing the config.

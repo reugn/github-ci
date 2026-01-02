@@ -13,15 +13,15 @@ The `upgrade` section controls how actions are upgraded.
 
 ```yaml
 upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
     actions/setup-go:
-      version: ~1.0.0
+      constraint: ~1.0.0
 ```
 
-### version
+### format
 
 Controls the format of action references after upgrade.
 
@@ -33,19 +33,19 @@ Controls the format of action references after upgrade.
 
 ### actions
 
-Per-action version patterns controlling which versions are allowed.
+Per-action version constraints controlling which versions are allowed.
 
-## Version Patterns
+## Version Constraints
 
 ### Caret (`^`) - Allow Minor Updates
 
 ```yaml
 actions:
   actions/checkout:
-    version: ^1.0.0  # Allows 1.x.x but not 2.x.x
+    constraint: ^1.0.0  # Allows 1.x.x but not 2.x.x
 ```
 
-| Pattern | Allowed | Not Allowed |
+| Constraint | Allowed | Not Allowed |
 |---------|---------|-------------|
 | `^1.0.0` | `1.0.1`, `1.2.0`, `1.99.0` | `2.0.0` |
 | `^2.0.0` | `2.0.1`, `2.5.0` | `3.0.0` |
@@ -58,10 +58,10 @@ actions:
 ```yaml
 actions:
   actions/checkout:
-    version: ~1.2.0  # Allows 1.2.x but not 1.3.x
+    constraint: ~1.2.0  # Allows 1.2.x but not 1.3.x
 ```
 
-| Pattern | Allowed | Not Allowed |
+| Constraint | Allowed | Not Allowed |
 |---------|---------|-------------|
 | `~1.2.0` | `1.2.1`, `1.2.5` | `1.3.0`, `2.0.0` |
 | `~2.5.0` | `2.5.1`, `2.5.99` | `2.6.0` |
@@ -78,12 +78,12 @@ Only allow patch updates for stability:
 
 ```yaml
 upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: ~4.0.0
+      constraint: ~4.0.0
     actions/setup-go:
-      version: ~5.0.0
+      constraint: ~5.0.0
 ```
 
 ### Major Version Pinning
@@ -92,10 +92,10 @@ Use major version tags for cleaner workflow files:
 
 ```yaml
 upgrade:
-  version: major
+  format: major
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
 ```
 
 Result:
@@ -109,10 +109,10 @@ Pin to exact commits for maximum security:
 
 ```yaml
 upgrade:
-  version: hash
+  format: hash
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
 ```
 
 Result:
@@ -122,23 +122,23 @@ Result:
 
 ### Mixed Strategies
 
-Different patterns for different actions:
+Different constraints for different actions:
 
 ```yaml
 upgrade:
-  version: tag
+  format: tag
   actions:
     # Critical actions - patch updates only
     actions/checkout:
-      version: ~4.0.0
+      constraint: ~4.0.0
     
     # Less critical - minor updates allowed
     actions/cache:
-      version: ^4.0.0
+      constraint: ^4.0.0
     
     # Third-party - more conservative
     docker/build-push-action:
-      version: ~5.0.0
+      constraint: ~5.0.0
 ```
 
 ## Upgrade Process
@@ -146,8 +146,8 @@ upgrade:
 1. **Discover**: Scan workflows for action usages
 2. **Resolve**: Get current version (resolve hash to tag if needed)
 3. **Fetch**: Get latest version from GitHub API
-4. **Compare**: Check if update matches version pattern
-5. **Update**: Apply update based on `version` format setting
+4. **Compare**: Check if update matches version constraint
+5. **Update**: Apply update based on `format` setting
 
 ## See Also
 

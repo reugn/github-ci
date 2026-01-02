@@ -122,7 +122,7 @@ func (u *Upgrader) loadAndInitConfig() (*config.Config, error) {
 
 		for _, action := range wfActions {
 			name := config.NormalizeActionName(action.Uses)
-			if cfg.Upgrade.Actions[name].Version == "" {
+			if cfg.Upgrade.Actions[name].Constraint == "" {
 				cfg.SetActionConfig(name, config.DefaultActionConfig)
 			}
 		}
@@ -170,7 +170,7 @@ func (u *Upgrader) checkForUpdate(cfg *config.Config, wf *workflow.Workflow,
 
 	currentVersion, warning := u.resolveCurrentVersion(actionInfo)
 	latestTag, latestHash, err := u.getLatestVersion(cfg, actionInfo, actionName,
-		currentVersion, actionCfg.Version)
+		currentVersion, actionCfg.Constraint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check %s: %w", actionName, err)
 	}
@@ -184,13 +184,13 @@ func (u *Upgrader) checkForUpdate(cfg *config.Config, wf *workflow.Workflow,
 		return nil, nil
 	}
 
-	// Determine version pattern for update check
-	pattern := actionCfg.Version
+	// Determine version constraint for update check
+	constraint := actionCfg.Constraint
 	if _, exists := cfg.Upgrade.Actions[actionName]; !exists {
-		pattern = "" // Allow any newer version if not in config
+		constraint = "" // Allow any newer version if not in config
 	}
 
-	versionNeedsUpdate := config.ShouldUpdate(currentVersion, latestTag, pattern)
+	versionNeedsUpdate := config.ShouldUpdate(currentVersion, latestTag, constraint)
 
 	// Update if either version or format needs changing
 	if !versionNeedsUpdate && !formatNeedsUpdate {
@@ -231,11 +231,11 @@ func (u *Upgrader) resolveCurrentVersion(info *actions.ActionInfo) (string, stri
 
 // getLatestVersion fetches the latest version based on config constraints.
 func (u *Upgrader) getLatestVersion(cfg *config.Config, info *actions.ActionInfo, actionName,
-	currentVersion, pattern string) (string, string, error) {
+	currentVersion, constraint string) (string, string, error) {
 	if _, exists := cfg.Upgrade.Actions[actionName]; !exists {
 		return u.client.GetLatestVersionUnconstrained(info.Owner, info.Repo)
 	}
-	return u.client.GetLatestVersion(info.Owner, info.Repo, currentVersion, pattern)
+	return u.client.GetLatestVersion(info.Owner, info.Repo, currentVersion, constraint)
 }
 
 // applyUpdate applies a single update to the workflow file.
