@@ -23,7 +23,7 @@ Or create `.github-ci.yaml` manually in your repository root.
 
 ```yaml
 run:
-  timeout: 5m          # timeout for GitHub API operations
+  timeout: 5m          # maximum duration for command execution
   issues-exit-code: 1  # exit code when issues are found
 
 linters:

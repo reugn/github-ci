@@ -11,8 +11,16 @@ url: "https://reugn.github.io"
 # Theme
 theme: just-the-docs
 
+# Sass (silence deprecation warnings from theme)
+sass:
+  quiet_deps: true
+  silence_deprecations:
+    - import
+    - global-builtin
+    - color-functions
+
 # Color scheme
-color_scheme: dark
+color_scheme: light
 
 # Aux links (top right)
 aux_links:

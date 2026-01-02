@@ -19,7 +19,7 @@ run:
 
 ### timeout
 
-Maximum time allowed for GitHub API operations.
+Maximum time allowed for command execution.
 
 | Value | Description |
 |-------|-------------|
@@ -28,11 +28,11 @@ Maximum time allowed for GitHub API operations.
 | `5m` | 5 minutes (default) |
 | `1h` | 1 hour |
 
-This is useful for CI/CD environments with strict time limits. If the timeout is reached, the command will fail.
+When the timeout is reached, the command is cancelled.
 
 ```yaml
 run:
-  timeout: 2m  # Fail if API calls take longer than 2 minutes
+  timeout: 2m  # Maximum duration for the entire command execution
 ```
 
 ### issues-exit-code

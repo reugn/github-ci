@@ -1,2 +1,56 @@
 <link rel="icon" href="{{ '/assets/images/favicon.svg' | relative_url }}" type="image/svg+xml">
 
+<!-- Determine theme before loading stylesheets -->
+<script>
+  var jtdTheme = localStorage.getItem('jtd-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', jtdTheme);
+</script>
+
+<!-- Theme stylesheets - disabled state set dynamically -->
+<link rel="stylesheet" href="{{ '/assets/css/just-the-docs-light.css' | relative_url }}" id="jtd-light">
+<link rel="stylesheet" href="{{ '/assets/css/just-the-docs-dark.css' | relative_url }}" id="jtd-dark">
+<script>
+  (function() {
+    var isDark = jtdTheme === 'dark';
+    document.getElementById('jtd-light').disabled = isDark;
+    document.getElementById('jtd-dark').disabled = !isDark;
+  })();
+
+  function toggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme') || 'light';
+    var newTheme = current === 'light' ? 'dark' : 'light';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    
+    var lightCss = document.getElementById('jtd-light');
+    var darkCss = document.getElementById('jtd-dark');
+    var isDark = newTheme === 'dark';
+    if (lightCss) lightCss.disabled = isDark;
+    if (darkCss) darkCss.disabled = !isDark;
+    
+    try {
+      localStorage.setItem('jtd-theme', newTheme);
+    } catch (e) {}
+  }
+</script>
+
+<style>
+  .theme-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    color: var(--link-color);
+    vertical-align: middle;
+    margin-right: 0.5rem;
+  }
+  .theme-toggle:hover {
+    opacity: 0.7;
+  }
+  /* Show correct icon based on theme */
+  .icon-sun { display: none; }
+  .icon-moon { display: inline; }
+  [data-theme="dark"] .icon-sun { display: inline; }
+  [data-theme="dark"] .icon-moon { display: none; }
+</style>
