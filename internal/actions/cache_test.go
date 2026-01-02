@@ -50,7 +50,7 @@ func TestCache_ConstrainedGetSet(t *testing.T) {
 	differentKey := NewConstrainedKey("owner", "repo", "v1.0.0", "^2.0.0")
 	_, ok = cache.GetConstrained(differentKey)
 	if ok {
-		t.Error("GetConstrained returned ok=true for different pattern")
+		t.Error("GetConstrained returned ok=true for different constraint")
 	}
 }
 
@@ -228,7 +228,7 @@ func TestVersionKey_IsConstrained(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "constrained with pattern only",
+			name:     "constrained with constraint only",
 			key:      NewConstrainedKey("owner", "repo", "", "^1.0.0"),
 			expected: true,
 		},

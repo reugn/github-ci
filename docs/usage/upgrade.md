@@ -17,13 +17,13 @@ github-ci upgrade [flags]
 
 ## Description
 
-The `upgrade` command checks for newer versions of actions in all workflows and updates them based on configured version patterns.
+The `upgrade` command checks for newer versions of actions in all workflows and updates them based on configured version constraints.
 
 This command:
 1. Scans all workflows to discover actions
 2. Updates `.github-ci.yaml` if it exists (use `init` command to create one)
 3. Checks for newer versions of each action
-4. Updates actions based on version patterns defined in the config
+4. Updates actions based on version constraints defined in the config
 
 ## Flags
 
@@ -63,7 +63,7 @@ GitHub API: 4 call(s), 2 from cache
 
 ## Version Format
 
-The `upgrade.version` config option controls how actions are referenced after upgrade:
+The `upgrade.format` config option controls how actions are referenced after upgrade:
 
 | Format | Example | Description |
 |--------|---------|-------------|
@@ -89,11 +89,11 @@ The `upgrade.version` config option controls how actions are referenced after up
 - uses: actions/checkout@8f4b7f84856dbbe3f95729c4cd48d901b28810a  # v4.1.1
 ```
 
-## Version Patterns
+## Version Constraints
 
 Control which versions are allowed for each action:
 
-| Pattern | Behavior | Example |
+| Constraint | Behavior | Example |
 |---------|----------|---------|
 | `^1.0.0` | Same major, any minor/patch | `1.x.x` |
 | `~1.2.0` | Same major.minor, any patch | `1.2.x` |
@@ -116,5 +116,5 @@ This appears when:
 
 ## See Also
 
-- [Configuration](../configuration/) - Configure version patterns
+- [Configuration](../configuration/) - Configure version constraints
 - [init](init) - Create configuration file

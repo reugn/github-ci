@@ -13,7 +13,7 @@ A CLI tool for managing GitHub Actions workflows. It helps you lint workflows fo
 - **Lint Workflows**: Check workflows for best practices with multiple configurable linters
 - **Auto-fix Issues**: Automatically fix formatting issues and replace version tags with commit hashes
 - **Upgrade Actions**: Discover and upgrade GitHub Actions to their latest versions based on semantic versioning patterns
-- **Config Management**: Configure linters and version update patterns via `.github-ci.yaml`
+- **Config Management**: Configure linters and version patterns via `.github-ci.yaml`
 
 ## Available Linters
 

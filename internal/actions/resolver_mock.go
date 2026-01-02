@@ -3,7 +3,7 @@ package actions
 // MockResolver is a mock implementation of the Resolver interface for testing.
 type MockResolver struct {
 	GetCommitHashFunc            func(owner, repo, ref string) (string, error)
-	GetLatestVersionFunc         func(owner, repo, currentVersion, versionPattern string) (string, string, error)
+	GetLatestVersionFunc         func(owner, repo, currentVersion, versionConstraint string) (string, string, error)
 	GetLatestVersionUnconstrFunc func(owner, repo string) (string, string, error)
 	GetTagForCommitFunc          func(owner, repo, commitHash string) (string, error)
 	GetLatestMinorVersionFunc    func(owner, repo, majorVersion string) (string, string, error)
@@ -19,9 +19,9 @@ func (m *MockResolver) GetCommitHash(owner, repo, ref string) (string, error) {
 	return "", nil
 }
 
-func (m *MockResolver) GetLatestVersion(owner, repo, currentVersion, versionPattern string) (string, string, error) {
+func (m *MockResolver) GetLatestVersion(owner, repo, currentVersion, versionConstraint string) (string, string, error) {
 	if m.GetLatestVersionFunc != nil {
-		return m.GetLatestVersionFunc(owner, repo, currentVersion, versionPattern)
+		return m.GetLatestVersionFunc(owner, repo, currentVersion, versionConstraint)
 	}
 	return "", "", nil
 }

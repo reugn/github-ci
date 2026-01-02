@@ -26,7 +26,7 @@ A CLI tool for managing GitHub Actions workflows. It helps lint workflows for be
   - **style**: Naming conventions and style best practices
 - **Auto-fix Issues**: Automatically fix formatting issues and replace version tags with commit hashes
 - **Upgrade Actions**: Discover and upgrade GitHub Actions to their latest versions based on semantic versioning patterns
-- **Config Management**: Configure linters and version update patterns via `.github-ci.yaml`
+- **Config Management**: Configure linters and version patterns via `.github-ci.yaml`
 
 ## Quick Start
 
@@ -136,10 +136,10 @@ linters:
       max-line-length: 120
 
 upgrade:
-  version: tag  # or 'major', 'hash'
+  format: tag  # or 'major', 'hash'
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
 ```
 
 See the [Configuration Guide](https://reugn.github.io/github-ci/configuration/) for all options.

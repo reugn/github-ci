@@ -23,8 +23,8 @@ func TestLoadConfig_NonExistent(t *testing.T) {
 	if cfg.Upgrade == nil {
 		t.Error("cfg.Upgrade is nil, want non-nil")
 	}
-	if cfg.Upgrade.Version != "tag" {
-		t.Errorf("cfg.Upgrade.Version = %q, want %q", cfg.Upgrade.Version, "tag")
+	if cfg.Upgrade.Format != "tag" {
+		t.Errorf("cfg.Upgrade.Format = %q, want %q", cfg.Upgrade.Format, "tag")
 	}
 }
 
@@ -44,10 +44,10 @@ linters:
     format:
       indent-width: 4
 upgrade:
-  version: hash
+  format: hash
   actions:
     actions/checkout:
-      version: ^2.0.0
+      constraint: ^2.0.0
 `
 	if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
@@ -70,15 +70,15 @@ upgrade:
 	}
 
 	// Check upgrade config
-	if cfg.Upgrade.Version != "hash" {
-		t.Errorf("cfg.Upgrade.Version = %q, want %q", cfg.Upgrade.Version, "hash")
+	if cfg.Upgrade.Format != "hash" {
+		t.Errorf("cfg.Upgrade.Format = %q, want %q", cfg.Upgrade.Format, "hash")
 	}
 	actionCfg, ok := cfg.Upgrade.Actions["actions/checkout"]
 	if !ok {
 		t.Fatal("actions/checkout not found in config")
 	}
-	if actionCfg.Version != "^2.0.0" {
-		t.Errorf("actions/checkout version = %q, want %q", actionCfg.Version, "^2.0.0")
+	if actionCfg.Constraint != "^2.0.0" {
+		t.Errorf("actions/checkout constraint = %q, want %q", actionCfg.Constraint, "^2.0.0")
 	}
 }
 
@@ -107,9 +107,9 @@ func TestSaveConfig(t *testing.T) {
 			Enable:  []string{"permissions"},
 		},
 		Upgrade: &UpgradeConfig{
-			Version: "tag",
+			Format: "tag",
 			Actions: map[string]ActionConfig{
-				"actions/checkout": {Version: "^1.0.0"},
+				"actions/checkout": {Constraint: "^1.0.0"},
 			},
 		},
 	}
@@ -128,8 +128,8 @@ func TestSaveConfig(t *testing.T) {
 	if loaded.Linters.Default != cfg.Linters.Default {
 		t.Errorf("Loaded default = %q, want %q", loaded.Linters.Default, cfg.Linters.Default)
 	}
-	if loaded.Upgrade.Version != cfg.Upgrade.Version {
-		t.Errorf("Loaded version = %q, want %q", loaded.Upgrade.Version, cfg.Upgrade.Version)
+	if loaded.Upgrade.Format != cfg.Upgrade.Format {
+		t.Errorf("Loaded format = %q, want %q", loaded.Upgrade.Format, cfg.Upgrade.Format)
 	}
 }
 
@@ -137,21 +137,21 @@ func TestConfig_GetActionConfig(t *testing.T) {
 	cfg := &Config{
 		Upgrade: &UpgradeConfig{
 			Actions: map[string]ActionConfig{
-				"actions/checkout": {Version: "^2.0.0"},
+				"actions/checkout": {Constraint: "^2.0.0"},
 			},
 		},
 	}
 
 	// Test existing action
 	actionCfg := cfg.GetActionConfig("actions/checkout")
-	if actionCfg.Version != "^2.0.0" {
-		t.Errorf("GetActionConfig() version = %q, want %q", actionCfg.Version, "^2.0.0")
+	if actionCfg.Constraint != "^2.0.0" {
+		t.Errorf("GetActionConfig() constraint = %q, want %q", actionCfg.Constraint, "^2.0.0")
 	}
 
 	// Test non-existing action (should return default)
 	actionCfg = cfg.GetActionConfig("actions/setup-go")
-	if actionCfg.Version != "^1.0.0" {
-		t.Errorf("GetActionConfig() default version = %q, want %q", actionCfg.Version, "^1.0.0")
+	if actionCfg.Constraint != "^1.0.0" {
+		t.Errorf("GetActionConfig() default constraint = %q, want %q", actionCfg.Constraint, "^1.0.0")
 	}
 }
 
@@ -159,15 +159,15 @@ func TestConfig_GetActionConfig_NilUpgrade(t *testing.T) {
 	cfg := &Config{}
 
 	actionCfg := cfg.GetActionConfig("actions/checkout")
-	if actionCfg.Version != "^1.0.0" {
-		t.Errorf("GetActionConfig() with nil Upgrade = %q, want %q", actionCfg.Version, "^1.0.0")
+	if actionCfg.Constraint != "^1.0.0" {
+		t.Errorf("GetActionConfig() with nil Upgrade constraint = %q, want %q", actionCfg.Constraint, "^1.0.0")
 	}
 }
 
 func TestConfig_SetActionConfig(t *testing.T) {
 	cfg := &Config{}
 
-	cfg.SetActionConfig("actions/checkout", ActionConfig{Version: "^3.0.0"})
+	cfg.SetActionConfig("actions/checkout", ActionConfig{Constraint: "^3.0.0"})
 
 	if cfg.Upgrade == nil {
 		t.Fatal("SetActionConfig() did not initialize Upgrade")
@@ -177,8 +177,8 @@ func TestConfig_SetActionConfig(t *testing.T) {
 	}
 
 	actionCfg := cfg.Upgrade.Actions["actions/checkout"]
-	if actionCfg.Version != "^3.0.0" {
-		t.Errorf("SetActionConfig() version = %q, want %q", actionCfg.Version, "^3.0.0")
+	if actionCfg.Constraint != "^3.0.0" {
+		t.Errorf("SetActionConfig() constraint = %q, want %q", actionCfg.Constraint, "^3.0.0")
 	}
 }
 
@@ -194,30 +194,30 @@ func TestConfig_GetVersionFormat(t *testing.T) {
 			expected: "tag",
 		},
 		{
-			name: "version is tag",
+			name: "format is tag",
 			cfg: &Config{
-				Upgrade: &UpgradeConfig{Version: "tag"},
+				Upgrade: &UpgradeConfig{Format: "tag"},
 			},
 			expected: "tag",
 		},
 		{
-			name: "version is hash",
+			name: "format is hash",
 			cfg: &Config{
-				Upgrade: &UpgradeConfig{Version: "hash"},
+				Upgrade: &UpgradeConfig{Format: "hash"},
 			},
 			expected: "hash",
 		},
 		{
-			name: "version is major",
+			name: "format is major",
 			cfg: &Config{
-				Upgrade: &UpgradeConfig{Version: "major"},
+				Upgrade: &UpgradeConfig{Format: "major"},
 			},
 			expected: "major",
 		},
 		{
-			name: "empty version defaults to tag",
+			name: "empty format defaults to tag",
 			cfg: &Config{
-				Upgrade: &UpgradeConfig{Version: ""},
+				Upgrade: &UpgradeConfig{Format: ""},
 			},
 			expected: "tag",
 		},
@@ -592,36 +592,36 @@ func TestShouldUpdate(t *testing.T) {
 		name           string
 		currentVersion string
 		newVersion     string
-		pattern        string
+		constraint     string
 		expected       bool
 	}{
 		// New version must be greater
 		{"same version", "1.0.0", "1.0.0", "", false},
 		{"older version", "2.0.0", "1.0.0", "", false},
-		{"newer version, empty pattern", "1.0.0", "2.0.0", "", true},
+		{"newer version, empty constraint", "1.0.0", "2.0.0", "", true},
 
-		// ^1.0.0 pattern
+		// ^1.0.0 constraint
 		{"^1.0.0 allows v2", "1.0.0", "v2.0.0", "^1.0.0", true},
 		{"^1.0.0 allows v5", "1.0.0", "v5.0.0", "^1.0.0", true},
 
-		// ^2.0.0 pattern (same major)
+		// ^2.0.0 constraint (same major)
 		{"^2.0.0 allows v2.5", "2.0.0", "v2.5.0", "^2.0.0", true},
 		{"^2.0.0 rejects v3", "2.0.0", "v3.0.0", "^2.0.0", false},
 
-		// ~2.5.0 pattern (same major.minor)
+		// ~2.5.0 constraint (same major.minor)
 		{"~2.5.0 allows v2.5.1", "2.5.0", "v2.5.1", "~2.5.0", true},
 		{"~2.5.0 rejects v2.6.0", "2.5.0", "v2.6.0", "~2.5.0", false},
 
-		// Invalid pattern
-		{"invalid pattern", "1.0.0", "2.0.0", "invalid", false},
+		// Invalid constraint
+		{"invalid constraint", "1.0.0", "2.0.0", "invalid", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ShouldUpdate(tt.currentVersion, tt.newVersion, tt.pattern)
+			result := ShouldUpdate(tt.currentVersion, tt.newVersion, tt.constraint)
 			if result != tt.expected {
 				t.Errorf("ShouldUpdate(%q, %q, %q) = %v, want %v",
-					tt.currentVersion, tt.newVersion, tt.pattern, result, tt.expected)
+					tt.currentVersion, tt.newVersion, tt.constraint, result, tt.expected)
 			}
 		})
 	}
@@ -662,19 +662,19 @@ func TestUpgradeConfig_EnsureDefaults(t *testing.T) {
 		wantVer string
 	}{
 		{
-			name:    "nil actions and empty version",
+			name:    "nil actions and empty format",
 			config:  &UpgradeConfig{},
 			wantVer: "tag",
 		},
 		{
-			name:    "nil actions with existing version",
-			config:  &UpgradeConfig{Version: "hash"},
+			name:    "nil actions with existing format",
+			config:  &UpgradeConfig{Format: "hash"},
 			wantVer: "hash",
 		},
 		{
-			name: "existing actions with empty version",
+			name: "existing actions with empty format",
 			config: &UpgradeConfig{
-				Actions: map[string]ActionConfig{"test": {Version: "^1.0.0"}},
+				Actions: map[string]ActionConfig{"test": {Constraint: "^1.0.0"}},
 			},
 			wantVer: "tag",
 		},
@@ -687,8 +687,8 @@ func TestUpgradeConfig_EnsureDefaults(t *testing.T) {
 			if tt.config.Actions == nil {
 				t.Error("Actions is nil after EnsureDefaults")
 			}
-			if tt.config.Version != tt.wantVer {
-				t.Errorf("Version = %q, want %q", tt.config.Version, tt.wantVer)
+			if tt.config.Format != tt.wantVer {
+				t.Errorf("Format = %q, want %q", tt.config.Format, tt.wantVer)
 			}
 		})
 	}
@@ -710,7 +710,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: &Config{
 				Run:     &RunConfig{Timeout: "5m", IssuesExitCode: 2},
 				Linters: &LinterConfig{Default: "all", Enable: []string{"versions"}},
-				Upgrade: &UpgradeConfig{Version: "tag"},
+				Upgrade: &UpgradeConfig{Format: "tag"},
 			},
 			wantErr: false,
 		},
@@ -745,8 +745,8 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "invalid upgrade version format",
-			config:  &Config{Upgrade: &UpgradeConfig{Version: "invalid"}},
+			name:    "invalid upgrade output format",
+			config:  &Config{Upgrade: &UpgradeConfig{Format: "invalid"}},
 			wantErr: true,
 		},
 		{

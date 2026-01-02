@@ -81,10 +81,10 @@ jobs:
 
 	configPath := testutil.CreateConfig(t, tmpDir, `
 upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
 `)
 
 	wf, err := workflow.LoadWorkflow(workflowPath)
@@ -120,10 +120,10 @@ jobs:
 
 	configPath := testutil.CreateConfig(t, tmpDir, `
 upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: ^1.0.0
+      constraint: ^1.0.0
 `)
 
 	wf, err := workflow.LoadWorkflow(workflowPath)
@@ -158,10 +158,10 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: "^1.0.0"
+      constraint: "^1.0.0"
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
@@ -217,10 +217,10 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: hash
+  format: hash
   actions:
     actions/checkout:
-      version: "^1.0.0"
+      constraint: "^1.0.0"
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
@@ -277,10 +277,10 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: "^4.0.0"
+      constraint: "^4.0.0"
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
@@ -343,10 +343,10 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: major
+  format: major
   actions:
     actions/checkout:
-      version: "^1.0.0"
+      constraint: "^1.0.0"
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
@@ -403,10 +403,10 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: tag
+  format: tag
   actions:
     actions/checkout:
-      version: "^4.0.0"
+      constraint: "^4.0.0"
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
@@ -448,7 +448,7 @@ jobs:
 	workflowPath := testutil.CreateWorkflow(t, tmpDir, "test.yml", workflowContent)
 
 	configContent := `upgrade:
-  version: tag
+  format: tag
 `
 	configPath := testutil.CreateConfig(t, tmpDir, configContent)
 
