@@ -17,6 +17,10 @@ go install github.com/reugn/github-ci/cmd/github-ci@latest
 
 Make sure `$GOPATH/bin` or `$GOBIN` is in your `$PATH`.
 
+## From Releases
+
+Download the latest binary for your platform from [Releases](https://github.com/reugn/github-ci/releases).
+
 ## From Source
 
 Clone the repository and build manually:
@@ -31,10 +35,11 @@ sudo mv github-ci /usr/local/bin/
 ## Verify Installation
 
 ```bash
+github-ci --version
 github-ci --help
 ```
 
-You should see the available commands and options.
+You should see the version and the available commands.
 
 ## Authentication
 

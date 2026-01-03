@@ -14,6 +14,11 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 }
 
+// SetVersion sets the version string for the CLI.
+func SetVersion(version string) {
+	rootCmd.Version = version
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		printError("%v", err)

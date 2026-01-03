@@ -1,0 +1,61 @@
+version: 2
+
+project_name: github-ci
+
+builds:
+  - main: .
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}macos
+      {{- else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [ 'zip' ]
+
+changelog:
+  use: github
+  format: "{{ .SHA }}: {{ .Message }}{{ with .AuthorUsername }} (@{{ . }}){{ end }}"
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Merge branch"
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\([^)]+\))?!?:.+$'
+      order: 10
+    - title: "Fixes"
+      regexp: '^.*?fix(\([^)]+\))?!?:.+$'
+      order: 20
+    - title: "Improvements"
+      regexp: '^.*?(refactor|perf)(\([^)]+\))?!?:.+$'
+      order: 30
+    - title: "Documentation updates"
+      regexp: '^.*?docs?(\([^)]+\))?!?:.+$'
+      order: 40
+    - title: "Maintenance"
+      order: 999
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  draft: true
+  name_template: "v{{ .Version }}"
+  footer: >-
+    **Full Changelog**:
+    https://github.com/{{ .Env.GITHUB_REPOSITORY }}/compare/{{ .PreviousTag }}...{{ .Tag }}

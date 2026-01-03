@@ -1,6 +1,7 @@
 .idea/
 .vscode/
 
+dist/
 coverage.out
 .github-ci.yaml
 /github-ci

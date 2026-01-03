@@ -34,6 +34,9 @@ A CLI tool for managing GitHub Actions workflows. It helps lint workflows for be
 # Install
 go install github.com/reugn/github-ci/cmd/github-ci@latest
 
+# Verify
+github-ci --version
+
 # Initialize config
 github-ci init
 
@@ -59,6 +62,10 @@ go install github.com/reugn/github-ci/cmd/github-ci@latest
 ```
 
 Make sure `$GOPATH/bin` or `$GOBIN` is in your `$PATH`.
+
+### From Releases
+
+Download the latest binary for your platform from [Releases](https://github.com/reugn/github-ci/releases).
 
 ### From Source
 
